@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import Modal from '@/components/Modal';
 import { productsAPI, customersAPI, invoicesAPI, shopAPI } from '@/utils/api';
 import { HiPlus, HiSearch, HiX } from 'react-icons/hi';
 
-export default function NewInvoice() {
+export default function EditInvoice() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const params = useParams();
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [shopSettings, setShopSettings] = useState(null);
@@ -28,6 +29,7 @@ export default function NewInvoice() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingInvoice, setLoadingInvoice] = useState(true);
 
   // Customer dropdown search state
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
@@ -70,19 +72,49 @@ export default function NewInvoice() {
 
   const loadData = async () => {
     try {
-      const [productsData, customersData, shopData] = await Promise.all([
+      const [productsData, customersData, shopData, invoiceData] = await Promise.all([
         productsAPI.getAll(),
         customersAPI.getAll(),
         shopAPI.get(),
+        invoicesAPI.getOne(params.id),
       ]);
+
       setProducts(productsData);
       setCustomers(customersData);
       setShopSettings(shopData);
-      if (shopData?.defaultTaxType) {
-        setTaxType(shopData.defaultTaxType);
+
+      // Populate form with invoice data
+      if (invoiceData) {
+        setInvoiceItems(invoiceData.items.map(item => ({
+          product: item.product?._id || item.product,
+          quantity: item.quantity,
+          sellingPrice: item.sellingPrice,
+          gstRate: item.gstRate,
+          cessRate: item.cessRate || 0,
+        })));
+        setTaxType(invoiceData.taxType || 'CGST_SGST');
+        setCessRate(invoiceData.cessRate || 0);
+        setDiscount(invoiceData.discount || 0);
+        setPaymentStatus(invoiceData.paymentStatus || 'PAID');
+        setPaymentMethod(invoiceData.paymentMethod || 'CASH');
+        setPaidAmount(invoiceData.paidAmount || 0);
+        setPaymentDetails(invoiceData.paymentDetails || '');
+        setNotes(invoiceData.notes || '');
+        setCustomerName(invoiceData.customerName || 'Cash Customer');
+        setCustomerPhone(invoiceData.customerPhone || '');
+        setInvoiceDate(invoiceData.invoiceDate ? new Date(invoiceData.invoiceDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+
+        if (invoiceData.customer) {
+          const customer = customersData.find(c => c._id === invoiceData.customer);
+          setSelectedCustomer(customer);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      alert('Failed to load invoice data');
+      router.push('/dashboard/invoices');
+    } finally {
+      setLoadingInvoice(false);
     }
   };
 
@@ -236,9 +268,9 @@ export default function NewInvoice() {
         notes,
       };
 
-      const invoice = await invoicesAPI.create(invoiceData);
-      alert('Invoice created successfully!');
-      router.push(`/dashboard/invoices/${invoice._id}`);
+      await invoicesAPI.update(params.id, invoiceData);
+      alert('Invoice updated successfully!');
+      router.push(`/dashboard/invoices/${params.id}`);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -248,14 +280,20 @@ export default function NewInvoice() {
 
   const totals = calculateTotals();
 
-  if (loading || !user) return null;
+  if (loading || !user || loadingInvoice) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">Loading...</div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Create New Invoice</h1>
-          <p className="mt-1 text-sm text-gray-600">Generate a new invoice for your customer</p>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Invoice</h1>
+          <p className="mt-1 text-sm text-gray-600">Update invoice details</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 text-black">
@@ -702,7 +740,7 @@ export default function NewInvoice() {
               disabled={submitting || invoiceItems.length === 0}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Creating Invoice...' : 'Create Invoice'}
+              {submitting ? 'Updating Invoice...' : 'Update Invoice'}
             </button>
           </div>
         </form>

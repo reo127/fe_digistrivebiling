@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { invoicesAPI } from '@/utils/api';
 import Link from 'next/link';
+import { HiEye, HiPencil, HiTrash } from 'react-icons/hi';
 
 export default function Invoices() {
   const { user, loading } = useAuth();
@@ -34,6 +35,20 @@ export default function Invoices() {
       console.error('Error loading invoices:', error);
     } finally {
       setLoadingInvoices(false);
+    }
+  };
+
+  const handleDelete = async (invoiceId, invoiceNumber) => {
+    if (!confirm(`Are you sure you want to delete invoice ${invoiceNumber}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await invoicesAPI.delete(invoiceId);
+      alert('Invoice deleted successfully');
+      loadInvoices(); // Reload the list
+    } catch (error) {
+      alert(error.message || 'Failed to delete invoice');
     }
   };
 
@@ -151,13 +166,30 @@ export default function Invoices() {
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right text-sm font-medium">
-                        <Link
-                          href={`/dashboard/invoices/${invoice._id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View
-                        </Link>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/dashboard/invoices/${invoice._id}`}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="View Invoice"
+                          >
+                            <HiEye className="w-5 h-5" />
+                          </Link>
+                          <Link
+                            href={`/dashboard/invoices/${invoice._id}/edit`}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                            title="Edit Invoice"
+                          >
+                            <HiPencil className="w-5 h-5" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(invoice._id, invoice.invoiceNumber)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                            title="Delete Invoice"
+                          >
+                            <HiTrash className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
