@@ -106,9 +106,6 @@ export default function PurchaseReturnDetail() {
                     <p>Phone: {shopSettings.phone}</p>
                     {shopSettings.email && <p>Email: {shopSettings.email}</p>}
                     <p className="font-semibold">GSTIN: {shopSettings.gstin}</p>
-                    {shopSettings.drugLicense && (
-                      <p>Drug License: {shopSettings.drugLicense}</p>
-                    )}
                   </div>
                 )}
               </div>

@@ -21,7 +21,6 @@ export default function NewSupplierPage() {
     city: '',
     state: '',
     pincode: '',
-    drugLicenseNo: '',
     bankDetails: {
       bankName: '',
       accountNumber: '',
@@ -172,19 +171,6 @@ export default function NewSupplierPage() {
                   onChange={handleChange}
                   maxLength={10}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Drug License No
-                </label>
-                <input
-                  type="text"
-                  name="drugLicenseNo"
-                  value={formData.drugLicenseNo}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
             </div>

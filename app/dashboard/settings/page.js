@@ -31,7 +31,6 @@ export default function Settings() {
     phone: '',
     email: '',
     gstin: '',
-    drugLicense: '',
     defaultTaxType: 'CGST_SGST',
   });
   const [saving, setSaving] = useState(false);
@@ -59,7 +58,6 @@ export default function Settings() {
           phone: data.phone || '',
           email: data.email || '',
           gstin: data.gstin || '',
-          drugLicense: data.drugLicense || '',
           defaultTaxType: data.defaultTaxType || 'CGST_SGST',
         });
       }
@@ -290,18 +288,6 @@ export default function Settings() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all uppercase"
                   placeholder="22AAAAA0000A1Z5"
                   maxLength={15}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Drug License No.</label>
-                <input
-                  type="text"
-                  name="drugLicense"
-                  value={formData.drugLicense}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  placeholder="DL-123456"
                 />
               </div>
 

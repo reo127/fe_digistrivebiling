@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
+import Modal from '@/components/Modal';
 import { purchasesAPI, suppliersAPI, productsAPI } from '@/utils/api';
 import { HiArrowLeft, HiPlus, HiTrash } from 'react-icons/hi';
 import Link from 'next/link';
@@ -28,6 +29,33 @@ export default function NewPurchasePage() {
     notes: ''
   });
 
+  // Supplier modal state
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [savingSupplier, setSavingSupplier] = useState(false);
+  const [supplierFormData, setSupplierFormData] = useState({
+    name: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+    gstin: '',
+    pan: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    bankDetails: {
+      bankName: '',
+      accountNumber: '',
+      ifscCode: '',
+      branch: ''
+    },
+    paymentTerms: 'NET_30',
+    creditDays: 30,
+    creditLimit: 0,
+    openingBalance: 0,
+    notes: ''
+  });
+
   useEffect(() => {
     loadData();
   }, []);
@@ -43,6 +71,66 @@ export default function NewPurchasePage() {
     } catch (error) {
       console.error('Error loading data:', error);
       alert(error.message);
+    }
+  };
+
+  const handleSupplierFormChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('bank.')) {
+      const bankField = name.split('.')[1];
+      setSupplierFormData({
+        ...supplierFormData,
+        bankDetails: {
+          ...supplierFormData.bankDetails,
+          [bankField]: value
+        }
+      });
+    } else {
+      setSupplierFormData({ ...supplierFormData, [name]: value });
+    }
+  };
+
+  const handleCreateSupplier = async (e) => {
+    e.preventDefault();
+    setSavingSupplier(true);
+
+    try {
+      const newSupplier = await suppliersAPI.create(supplierFormData);
+      // Reload suppliers list
+      const suppliersData = await suppliersAPI.getAll();
+      setSuppliers(suppliersData);
+      // Auto-select the newly created supplier
+      setFormData({ ...formData, supplier: newSupplier._id });
+      // Close modal and reset form
+      setShowSupplierModal(false);
+      setSupplierFormData({
+        name: '',
+        contactPerson: '',
+        phone: '',
+        email: '',
+        gstin: '',
+        pan: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        bankDetails: {
+          bankName: '',
+          accountNumber: '',
+          ifscCode: '',
+          branch: ''
+        },
+        paymentTerms: 'NET_30',
+        creditDays: 30,
+        creditLimit: 0,
+        openingBalance: 0,
+        notes: ''
+      });
+      alert('Supplier added successfully!');
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setSavingSupplier(false);
     }
   };
 
@@ -179,23 +267,33 @@ export default function NewPurchasePage() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Purchase Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
+              <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Supplier <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formData.supplier}
-                  onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="">Select Supplier</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier._id} value={supplier._id}>
-                      {supplier.name} - {supplier.gstin}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={formData.supplier}
+                    onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                    required
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">Select Supplier</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier._id} value={supplier._id}>
+                        {supplier.name} - {supplier.gstin}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowSupplierModal(true)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                    title="Add New Supplier"
+                  >
+                    <HiPlus className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -617,6 +715,256 @@ export default function NewPurchasePage() {
           </div>
         </form>
       </div>
+
+      {/* New Supplier Modal */}
+      <Modal
+        isOpen={showSupplierModal}
+        onClose={() => setShowSupplierModal(false)}
+        title="Add New Supplier"
+        size="max-w-4xl"
+      >
+        <form onSubmit={handleCreateSupplier} className="space-y-6">
+          {/* Basic Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Supplier Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={supplierFormData.name}
+                  onChange={handleSupplierFormChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contact Person
+                </label>
+                <input
+                  type="text"
+                  name="contactPerson"
+                  value={supplierFormData.contactPerson}
+                  onChange={handleSupplierFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={supplierFormData.phone}
+                  onChange={handleSupplierFormChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={supplierFormData.email}
+                  onChange={handleSupplierFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Tax Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tax Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  GSTIN <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="gstin"
+                  value={supplierFormData.gstin}
+                  onChange={handleSupplierFormChange}
+                  required
+                  maxLength={15}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  PAN
+                </label>
+                <input
+                  type="text"
+                  name="pan"
+                  value={supplierFormData.pan}
+                  onChange={handleSupplierFormChange}
+                  maxLength={10}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Address</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Address
+                </label>
+                <textarea
+                  name="address"
+                  value={supplierFormData.address}
+                  onChange={handleSupplierFormChange}
+                  rows={2}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={supplierFormData.city}
+                    onChange={handleSupplierFormChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="state"
+                    value={supplierFormData.state}
+                    onChange={handleSupplierFormChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pincode
+                  </label>
+                  <input
+                    type="text"
+                    name="pincode"
+                    value={supplierFormData.pincode}
+                    onChange={handleSupplierFormChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Terms */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Terms</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Terms
+                </label>
+                <select
+                  name="paymentTerms"
+                  value={supplierFormData.paymentTerms}
+                  onChange={handleSupplierFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="IMMEDIATE">Immediate</option>
+                  <option value="NET_15">Net 15 Days</option>
+                  <option value="NET_30">Net 30 Days</option>
+                  <option value="NET_45">Net 45 Days</option>
+                  <option value="NET_60">Net 60 Days</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Credit Limit (₹)
+                </label>
+                <input
+                  type="number"
+                  name="creditLimit"
+                  value={supplierFormData.creditLimit}
+                  onChange={handleSupplierFormChange}
+                  min="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Opening Balance (₹)
+                </label>
+                <input
+                  type="number"
+                  name="openingBalance"
+                  value={supplierFormData.openingBalance}
+                  onChange={handleSupplierFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notes
+            </label>
+            <textarea
+              name="notes"
+              value={supplierFormData.notes}
+              onChange={handleSupplierFormChange}
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              placeholder="Any additional notes about this supplier..."
+            />
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end gap-4 pt-4 border-t">
+            <button
+              type="button"
+              onClick={() => setShowSupplierModal(false)}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingSupplier}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {savingSupplier ? 'Saving...' : 'Add Supplier'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </DashboardLayout>
   );
 }

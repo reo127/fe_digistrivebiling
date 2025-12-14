@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import Modal from '@/components/Modal';
 import { productsAPI, customersAPI, invoicesAPI, shopAPI } from '@/utils/api';
+import { HiPlus, HiSearch, HiX } from 'react-icons/hi';
 
 export default function NewInvoice() {
   const { user, loading } = useAuth();
@@ -25,6 +27,24 @@ export default function NewInvoice() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Customer dropdown search state
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+
+  // Customer modal state
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerFormData, setCustomerFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    gstin: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+  });
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -32,6 +52,19 @@ export default function NewInvoice() {
       loadData();
     }
   }, [user, loading, router]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isCustomerDropdownOpen && !event.target.closest('.customer-dropdown-container')) {
+        setIsCustomerDropdownOpen(false);
+        setCustomerSearchTerm('');
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCustomerDropdownOpen]);
 
   const loadData = async () => {
     try {
@@ -48,6 +81,44 @@ export default function NewInvoice() {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+    }
+  };
+
+  const handleCustomerFormChange = (e) => {
+    const { name, value } = e.target;
+    setCustomerFormData({ ...customerFormData, [name]: value });
+  };
+
+  const handleCreateCustomer = async (e) => {
+    e.preventDefault();
+    setSavingCustomer(true);
+
+    try {
+      const newCustomer = await customersAPI.create(customerFormData);
+      // Reload customers list
+      const customersData = await customersAPI.getAll();
+      setCustomers(customersData);
+      // Auto-select the newly created customer
+      setSelectedCustomer(newCustomer);
+      setCustomerName(newCustomer.name);
+      setCustomerPhone(newCustomer.phone);
+      // Close modal and reset form
+      setShowCustomerModal(false);
+      setCustomerFormData({
+        name: '',
+        phone: '',
+        email: '',
+        gstin: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+      });
+      alert('Customer added successfully!');
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setSavingCustomer(false);
     }
   };
 
@@ -89,7 +160,14 @@ export default function NewInvoice() {
       setCustomerName('Cash Customer');
       setCustomerPhone('');
     }
+    setIsCustomerDropdownOpen(false);
+    setCustomerSearchTerm('');
   };
+
+  const filteredCustomers = customers.filter((customer) =>
+    customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+    customer.phone.includes(customerSearchTerm)
+  );
 
   const calculateTotals = () => {
     const subtotal = invoiceItems.reduce((sum, item) => {
@@ -170,17 +248,91 @@ export default function NewInvoice() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Customer (Optional)
                 </label>
-                <select
-                  onChange={(e) => handleCustomerChange(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Cash Customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer._id} value={customer._id}>
-                      {customer.name} - {customer.phone}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative customer-dropdown-container">
+                    {/* Display selected customer or search input */}
+                    <div
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent bg-white cursor-pointer"
+                      onClick={() => setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={selectedCustomer ? 'text-gray-900' : 'text-gray-500'}>
+                          {selectedCustomer ? `${selectedCustomer.name} - ${selectedCustomer.phone}` : 'Cash Customer'}
+                        </span>
+                        {selectedCustomer && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCustomerChange('');
+                            }}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <HiX className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dropdown */}
+                    {isCustomerDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                        {/* Search Input */}
+                        <div className="p-2 border-b border-gray-200">
+                          <div className="relative">
+                            <HiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <input
+                              type="text"
+                              placeholder="Search by name or phone..."
+                              value={customerSearchTerm}
+                              onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+
+                        {/* Options */}
+                        <div className="max-h-60 overflow-y-auto">
+                          {/* Cash Customer Option */}
+                          <div
+                            onClick={() => handleCustomerChange('')}
+                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-700"
+                          >
+                            Cash Customer
+                          </div>
+
+                          {/* Filtered Customers */}
+                          {filteredCustomers.length > 0 ? (
+                            filteredCustomers.map((customer) => (
+                              <div
+                                key={customer._id}
+                                onClick={() => handleCustomerChange(customer._id)}
+                                className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-t border-gray-100"
+                              >
+                                <div className="font-medium text-gray-900">{customer.name}</div>
+                                <div className="text-sm text-gray-500">{customer.phone}</div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                              No customers found
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomerModal(true)}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                    title="Add New Customer"
+                  >
+                    <HiPlus className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -467,6 +619,143 @@ export default function NewInvoice() {
           </div>
         </form>
       </div>
+
+      {/* New Customer Modal */}
+      <Modal
+        isOpen={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        title="Add New Customer"
+        size="max-w-2xl"
+      >
+        <form onSubmit={handleCreateCustomer} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Customer Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={customerFormData.name}
+                onChange={handleCustomerFormChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={customerFormData.phone}
+                onChange={handleCustomerFormChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={customerFormData.email}
+                onChange={handleCustomerFormChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                GSTIN
+              </label>
+              <input
+                type="text"
+                name="gstin"
+                value={customerFormData.gstin}
+                onChange={handleCustomerFormChange}
+                maxLength={15}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address
+              </label>
+              <textarea
+                name="address"
+                value={customerFormData.address}
+                onChange={handleCustomerFormChange}
+                rows={2}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={customerFormData.city}
+                onChange={handleCustomerFormChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                State
+              </label>
+              <input
+                type="text"
+                name="state"
+                value={customerFormData.state}
+                onChange={handleCustomerFormChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pincode
+              </label>
+              <input
+                type="text"
+                name="pincode"
+                value={customerFormData.pincode}
+                onChange={handleCustomerFormChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end gap-4 pt-4 border-t">
+            <button
+              type="button"
+              onClick={() => setShowCustomerModal(false)}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingCustomer}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {savingCustomer ? 'Saving...' : 'Add Customer'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </DashboardLayout>
   );
 }
