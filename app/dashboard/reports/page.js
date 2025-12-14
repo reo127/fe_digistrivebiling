@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { HiDownload, HiDocumentReport } from 'react-icons/hi';
-import { reportsAPI } from '@/utils/api';
+import { reportsAPI, shopAPI } from '@/utils/api';
 import * as XLSX from 'xlsx';
 
 export default function ReportsPage() {
@@ -14,6 +14,25 @@ export default function ReportsPage() {
   });
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
+  const [shopName, setShopName] = useState('Billing Software');
+
+  // Fetch shop settings and update page title
+  useEffect(() => {
+    const loadShopSettings = async () => {
+      try {
+        const settings = await shopAPI.get();
+        if (settings && settings.shopName) {
+          const appTitle = `${settings.shopName} - Billing Software`;
+          setShopName(settings.shopName);
+          // Update browser page title dynamically
+          document.title = appTitle;
+        }
+      } catch (error) {
+        console.error('Error loading shop settings:', error);
+      }
+    };
+    loadShopSettings();
+  }, []);
 
   const tabs = [
     { id: 'gstr1', name: 'GSTR-1', description: 'Outward Supplies' },
@@ -69,7 +88,7 @@ export default function ReportsPage() {
     }
 
     if (format === 'pdf') {
-      alert('⚠️ IMPORTANT - To remove the date/time header:\n\n1. In the print dialog that opens, click "More settings"\n2. Turn OFF the "Headers and footers" option\n3. Set margins to "Default" or "None"\n4. Click "Save" to download PDF\n\n❌ Without doing this, you will see browser headers like:\n"14/12/2025, 02:38 MediStore - Billing Software"\n\n✅ After turning off headers, you will get a clean PDF');
+      alert(`⚠️ IMPORTANT - To remove the date/time header:\n\n1. In the print dialog that opens, click "More settings"\n2. Turn OFF the "Headers and footers" option\n3. Set margins to "Default" or "None"\n4. Click "Save" to download PDF\n\n❌ Without doing this, you will see browser headers like:\n"14/12/2025, 02:38 ${shopName} - Billing Software"\n\n✅ After turning off headers, you will get a clean PDF`);
       window.print();
       return;
     }
@@ -327,7 +346,7 @@ export default function ReportsPage() {
                 📄 For clean PDF exports: Turn OFF "Headers and footers" in your browser's print dialog
               </p>
               <p className="mt-1 text-xs text-amber-700">
-                This removes the browser-generated date/time text that appears at the top of PDFs (e.g., "14/12/2025, 02:38 MediStore - Billing Software")
+                This removes the browser-generated date/time text that appears at the top of PDFs (e.g., "14/12/2025, 02:38 {shopName} - Billing Software")
               </p>
             </div>
           </div>

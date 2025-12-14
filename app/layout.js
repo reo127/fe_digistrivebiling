@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { APP_CONFIG } from "@/config/appConfig";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -8,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Billing Software",
-  description: "Professional billing software for your business",
+  title: APP_CONFIG.appTitle,
+  description: APP_CONFIG.appDescription,
 };
 
 export default function RootLayout({ children }) {

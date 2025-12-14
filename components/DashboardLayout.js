@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { shopAPI } from '@/utils/api';
+import { APP_CONFIG } from '@/config/appConfig';
 import {
   HiHome,
   HiDocumentAdd,
@@ -61,7 +62,7 @@ export default function DashboardLayout({ children }) {
     loadShopSettings();
   }, []);
 
-  const shopName = shopSettings?.shopName || 'Billing Software';
+  const shopName = shopSettings?.shopName || APP_CONFIG.shopName;
 
   return (
     <div className="min-h-screen bg-gray-50">

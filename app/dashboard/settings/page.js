@@ -73,6 +73,10 @@ export default function Settings() {
 
     try {
       await shopAPI.update(formData);
+      // Update browser page title with new shop name
+      if (formData.shopName) {
+        document.title = `${formData.shopName} - Billing Software`;
+      }
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {

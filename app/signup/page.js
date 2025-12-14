@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { HiMail, HiLockClosed, HiUser, HiArrowRight } from 'react-icons/hi';
+import { APP_CONFIG } from '@/config/appConfig';
 
 export default function Signup() {
   const [name, setName] = useState('');
@@ -12,7 +13,24 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [shopName, setShopName] = useState(APP_CONFIG.shopName);
   const { signup } = useAuth();
+
+  useEffect(() => {
+    const fetchShopName = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/shop/public/name`);
+        const data = await response.json();
+        if (data.shopName) {
+          setShopName(data.shopName);
+        }
+      } catch (error) {
+        console.error('Error fetching shop name:', error);
+        // Keep default name from APP_CONFIG
+      }
+    };
+    fetchShopName();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,10 +64,10 @@ export default function Signup() {
         <div className="text-center mb-10">
           <div className="inline-block mb-4">
             <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-2xl font-bold text-white">M</span>
+              <span className="text-2xl font-bold text-white">{shopName[0]?.toUpperCase()}</span>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">MediStore</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">{shopName}</h1>
           <p className="text-gray-600 text-sm">Professional Billing Software</p>
         </div>
 
@@ -178,7 +196,7 @@ export default function Signup() {
 
         {/* Footer */}
         <p className="text-center text-xs text-gray-500 mt-8">
-          © 2024 MediStore. All rights reserved.
+          © {APP_CONFIG.copyrightYear} {shopName}. All rights reserved.
         </p>
       </div>
     </div>
