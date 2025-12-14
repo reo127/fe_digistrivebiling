@@ -15,12 +15,14 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [shopName, setShopName] = useState('Billing Software');
+  const [shopSettings, setShopSettings] = useState(null);
 
   // Fetch shop settings and update page title
   useEffect(() => {
     const loadShopSettings = async () => {
       try {
         const settings = await shopAPI.get();
+        setShopSettings(settings);
         if (settings && settings.shopName) {
           const appTitle = `${settings.shopName} - Billing Software`;
           setShopName(settings.shopName);
@@ -135,51 +137,222 @@ export default function ReportsPage() {
     const dateStr = `${dateRange.startDate}_to_${dateRange.endDate}`;
 
     if (activeTab === 'gstr1') {
-      // Summary sheet
-      const summaryData = [
-        ['GSTR-1 Report'],
-        ['Period', `${dateRange.startDate} to ${dateRange.endDate}`],
-        [''],
-        ['Summary'],
-        ['Total Invoices', reportData.summary.totalInvoices],
-        ['Taxable Value', reportData.summary.totalTaxableValue.toFixed(2)],
-        ['Total Tax', reportData.summary.totalTax.toFixed(2)],
-        ['Invoice Value', reportData.summary.totalInvoiceValue.toFixed(2)],
-        ['B2B Count', reportData.summary.b2bCount],
-        ['B2C Large Count', reportData.summary.b2cLargeCount],
-        ['B2C Small Count', reportData.summary.b2cSmallCount],
+      // Get period formatted
+      const startDate = new Date(dateRange.startDate);
+      const endDate = new Date(dateRange.endDate);
+      const periodStr = `${startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+
+      // Main GSTR1 Report Sheet
+      const gstr1Data = [
+        ['Period', periodStr, '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['1. GSTIN', shopSettings?.gstin || '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['2.a Legal name of the registered person.', shopSettings?.shopName || '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['2.b Trade name, if any', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['3.a Aggregate turnover of the preceeding Financial Year', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['3.b Aggregate turnover, April to June 2017', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['GSTIN/UIN', 'Party Name', 'Transaction Type', 'Invoice No.', 'Invoice Date', 'Invoice Value', 'Rate', 'Cess Rate', 'Taxable value', 'Reverse Charge', 'Integrated Tax Amount', 'Central Tax Amount', 'State/UT Tax Amount', 'Cess Amount', 'Place of Supply(Name of state)'],
+        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
       ];
-      const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
-      XLSX.utils.book_append_sheet(workbook, summaryWS, 'Summary');
 
-      // B2B Invoices sheet
-      if (reportData.b2bInvoices.length > 0) {
-        const b2bData = reportData.b2bInvoices.map(inv => ({
-          'Invoice No': inv.invoiceNumber,
-          'Date': new Date(inv.invoiceDate).toLocaleDateString('en-IN'),
-          'Customer': inv.customerName,
-          'GSTIN': inv.gstin,
-          'Taxable Value': inv.taxableValue.toFixed(2),
-          'CGST': inv.cgst.toFixed(2),
-          'SGST': inv.sgst.toFixed(2),
-          'IGST': inv.igst.toFixed(2),
-          'Total': inv.invoiceValue.toFixed(2)
-        }));
-        const b2bWS = XLSX.utils.json_to_sheet(b2bData);
-        XLSX.utils.book_append_sheet(workbook, b2bWS, 'B2B Invoices');
-      }
+      // Add invoice data rows
+      let totalInvoiceValue = 0;
+      let totalTaxableValue = 0;
+      let totalIGST = 0;
+      let totalCGST = 0;
+      let totalSGST = 0;
+      let totalCess = 0;
 
-      // GST Rate wise sheet
-      const rateData = Object.entries(reportData.gstRateTotals).map(([rate, data]) => ({
-        'GST Rate': `${rate}%`,
-        'Taxable Value': data.taxableValue.toFixed(2),
-        'CGST': data.cgst.toFixed(2),
-        'SGST': data.sgst.toFixed(2),
-        'IGST': data.igst.toFixed(2),
-        'Total Tax': data.totalTax.toFixed(2)
-      }));
-      const rateWS = XLSX.utils.json_to_sheet(rateData);
-      XLSX.utils.book_append_sheet(workbook, rateWS, 'GST Rate Summary');
+      // Combine all invoices (B2B and B2C)
+      const allInvoices = [...(reportData.b2bInvoices || []), ...(reportData.b2cSmallInvoices || []), ...(reportData.b2cLargeInvoices || [])];
+
+      allInvoices.forEach(inv => {
+        const invoiceDate = new Date(inv.invoiceDate);
+        const formattedDate = `${String(invoiceDate.getDate()).padStart(2, '0')}/${String(invoiceDate.getMonth() + 1).padStart(2, '0')}/${invoiceDate.getFullYear()}`;
+
+        gstr1Data.push([
+          inv.gstin || '',
+          inv.customerName || '',
+          'Sale',
+          inv.invoiceNumber || '',
+          formattedDate,
+          inv.invoiceValue || 0,
+          inv.gstRate || 0,
+          inv.cessRate || 0,
+          inv.taxableValue || 0,
+          'N',
+          inv.igst || 0,
+          inv.cgst || 0,
+          inv.sgst || 0,
+          inv.cessAmount || 0,
+          inv.placeOfSupply || ''
+        ]);
+
+        totalInvoiceValue += inv.invoiceValue || 0;
+        totalTaxableValue += inv.taxableValue || 0;
+        totalIGST += inv.igst || 0;
+        totalCGST += inv.cgst || 0;
+        totalSGST += inv.sgst || 0;
+        totalCess += inv.cessAmount || 0;
+      });
+
+      // Add totals row
+      gstr1Data.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+      gstr1Data.push(['Total', '', '', '', '', totalInvoiceValue, '', '', totalTaxableValue, '', totalIGST, totalCGST, totalSGST, totalCess, '']);
+
+      const gstr1WS = XLSX.utils.aoa_to_sheet(gstr1Data);
+      XLSX.utils.book_append_sheet(workbook, gstr1WS, 'GSTR1 Report');
+
+      // B2B, SEZ, DE Sheet
+      const b2bSummaryData = [
+        ['Summary For B2B, SEZ, DE (4A, 4B, 6B, 6C)', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['No. of Recipients', '', 'No. of Invoices', '', 'Total Invoice Value', '', '', '', '', '', '', 'Total Taxable Value', 'Total Cess'],
+        [reportData.summary?.b2bCount || 0, '', (reportData.b2bInvoices || []).length, '', totalInvoiceValue, '', '', '', '', '', '', totalTaxableValue, totalCess],
+        ['GSTIN/UIN of Recipient', 'Receiver Name', 'Invoice Number', 'Invoice date', 'Invoice Value', 'Place Of Supply', 'Reverse Charge', 'Applicable % of Tax Rate', 'Invoice Type', 'E-Commerce GSTIN', 'Rate', 'Taxable Value', 'Cess Amount']
+      ];
+
+      (reportData.b2bInvoices || []).forEach(inv => {
+        const invoiceDate = new Date(inv.invoiceDate);
+        const formattedDate = `${String(invoiceDate.getDate()).padStart(2, '0')}/${String(invoiceDate.getMonth() + 1).padStart(2, '0')}/${invoiceDate.getFullYear()}`;
+        b2bSummaryData.push([
+          inv.gstin || '',
+          inv.customerName || '',
+          inv.invoiceNumber || '',
+          formattedDate,
+          inv.invoiceValue || 0,
+          inv.placeOfSupply || '',
+          'N',
+          '',
+          'Regular',
+          '',
+          inv.gstRate || 0,
+          inv.taxableValue || 0,
+          inv.cessAmount || 0
+        ]);
+      });
+
+      const b2bWS = XLSX.utils.aoa_to_sheet(b2bSummaryData);
+      XLSX.utils.book_append_sheet(workbook, b2bWS, 'b2b,sez,de');
+
+      // B2CL Sheet
+      const b2clData = [
+        ['Summary For B2CL(5)', '', '', '', '', '', '', '', ''],
+        ['No. of Invoices', '', 'Total Invoice Value', '', '', '', 'Total Taxable Value', 'Total Cess', ''],
+        [(reportData.b2cLargeInvoices || []).length, '', reportData.summary?.b2cLargeValue || 0, '', '', '', reportData.summary?.b2cLargeTaxable || 0, 0, ''],
+        ['Invoice Number', 'Invoice date', 'Invoice Value', 'Place Of Supply', 'Applicable % of Tax Rate', 'Rate', 'Taxable Value', 'Cess Amount', 'E-Commerce GSTIN']
+      ];
+
+      (reportData.b2cLargeInvoices || []).forEach(inv => {
+        const invoiceDate = new Date(inv.invoiceDate);
+        const formattedDate = `${String(invoiceDate.getDate()).padStart(2, '0')}/${String(invoiceDate.getMonth() + 1).padStart(2, '0')}/${invoiceDate.getFullYear()}`;
+        b2clData.push([
+          inv.invoiceNumber || '',
+          formattedDate,
+          inv.invoiceValue || 0,
+          inv.placeOfSupply || '',
+          '',
+          inv.gstRate || 0,
+          inv.taxableValue || 0,
+          inv.cessAmount || 0,
+          ''
+        ]);
+      });
+
+      const b2clWS = XLSX.utils.aoa_to_sheet(b2clData);
+      XLSX.utils.book_append_sheet(workbook, b2clWS, 'b2cl');
+
+      // B2CS Sheet - Group by rate and place of supply
+      const b2csGrouped = {};
+      (reportData.b2cSmallInvoices || []).forEach(inv => {
+        const key = `${inv.gstRate || 0}_${inv.placeOfSupply || ''}`;
+        if (!b2csGrouped[key]) {
+          b2csGrouped[key] = {
+            rate: inv.gstRate || 0,
+            placeOfSupply: inv.placeOfSupply || '',
+            taxableValue: 0,
+            cessAmount: 0
+          };
+        }
+        b2csGrouped[key].taxableValue += inv.taxableValue || 0;
+        b2csGrouped[key].cessAmount += inv.cessAmount || 0;
+      });
+
+      const b2csTotalTaxable = Object.values(b2csGrouped).reduce((sum, item) => sum + item.taxableValue, 0);
+      const b2csTotalCess = Object.values(b2csGrouped).reduce((sum, item) => sum + item.cessAmount, 0);
+
+      const b2csData = [
+        ['Summary For B2CS(7)', '', '', '', '', '', '', '', ''],
+        ['', '', '', '', 'Total Taxable Value', 'Total Cess', '', '', ''],
+        ['', '', '', '', b2csTotalTaxable, b2csTotalCess, '', '', ''],
+        ['Type', 'Place Of Supply', 'Applicable % of Tax Rate', 'Rate', 'Taxable Value', 'Cess Amount', 'E-Commerce GSTIN', '', '']
+      ];
+
+      Object.values(b2csGrouped).forEach(item => {
+        b2csData.push([
+          'OE',
+          item.placeOfSupply,
+          '',
+          item.rate,
+          item.taxableValue,
+          item.cessAmount,
+          '',
+          '',
+          ''
+        ]);
+      });
+
+      const b2csWS = XLSX.utils.aoa_to_sheet(b2csData);
+      XLSX.utils.book_append_sheet(workbook, b2csWS, 'b2cs');
+
+      // Exempt Sheet
+      const exempData = [
+        ['Summary For Nil rated, exempted and non GST outward supplies (8)', '', '', ''],
+        ['', 'Total Nil Rated Supplies', 'Total Exempted Supplies', 'Total Non-GST Supplies'],
+        ['', 0, 0, 0],
+        ['Description', 'Nil Rated Supplies', 'Exempted(other than nil rated/non GST supply)', 'Non-GST Supplies'],
+        ['Inter-State supplies to registered persons', 0, 0, 0],
+        ['Intra-State supplies to registered persons', 0, 0, 0],
+        ['Inter-State supplies to unregistered persons', 0, 0, 0],
+        ['Intra-State supplies to unregistered persons', 0, 0, 0]
+      ];
+
+      const exempWS = XLSX.utils.aoa_to_sheet(exempData);
+      XLSX.utils.book_append_sheet(workbook, exempWS, 'exemp');
+
+      // HSN(B2B) Sheet
+      const hsnb2bData = [
+        ['Summary For HSN(12)', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        ['No. of HSN', '', '', '', 'Total Value', '', 'Total Taxable Value', 'Total Integrated Tax', 'Total Central Tax', 'Total State/UT Tax', 'Total Cess', '', '', ''],
+        [0, '', '', '', 0, '', 0, 0, 0, 0, 0, '', '', ''],
+        ['HSN', 'Description', 'UQC', 'Total Quantity', 'Total Value', 'Rate', 'Taxable Value', 'Integrated Tax Amount', 'Central Tax Amount', 'State/UT Tax Amount', 'Cess Amount', '', '', '']
+      ];
+
+      const hsnb2bWS = XLSX.utils.aoa_to_sheet(hsnb2bData);
+      XLSX.utils.book_append_sheet(workbook, hsnb2bWS, 'hsn(b2b)');
+
+      // HSN(B2C) Sheet - This should contain grouped HSN data
+      const hsnb2cWS = XLSX.utils.aoa_to_sheet(hsnb2bData); // Similar structure
+      XLSX.utils.book_append_sheet(workbook, hsnb2cWS, 'hsn(b2c)');
+
+      // Item Summary Sheet
+      const itemSummaryWS = XLSX.utils.aoa_to_sheet(hsnb2bData); // Similar structure
+      XLSX.utils.book_append_sheet(workbook, itemSummaryWS, 'itemSummary');
+
+      // Docs Sheet
+      const firstInvoice = allInvoices.length > 0 ? allInvoices[0].invoiceNumber : '';
+      const lastInvoice = allInvoices.length > 0 ? allInvoices[allInvoices.length - 1].invoiceNumber : '';
+
+      const docsData = [
+        ['Summary of documents issued during the tax period (13)', '', '', '', ''],
+        ['', '', '', 'Total Number', 'Total Cancelled'],
+        ['', '', '', allInvoices.length, '0'],
+        ['Nature of Document', 'Sr. No. From', 'Sr. No. To', 'Total Number', 'Cancelled'],
+        ['Invoices for outward supply', firstInvoice, lastInvoice, allInvoices.length.toString(), '0']
+      ];
+
+      const docsWS = XLSX.utils.aoa_to_sheet(docsData);
+      XLSX.utils.book_append_sheet(workbook, docsWS, 'docs');
     }
     else if (activeTab === 'gstr3b') {
       const gstr3bData = [
