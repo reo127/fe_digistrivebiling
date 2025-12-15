@@ -119,7 +119,7 @@ export default function NewExpensePage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6 text-black">
           {/* Basic Information */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Expense Details</h2>

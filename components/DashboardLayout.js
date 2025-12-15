@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { shopAPI } from '@/utils/api';
@@ -68,24 +69,37 @@ export default function DashboardLayout({ children }) {
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar for desktop */}
       <div
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ease-in-out ${
-          collapsed ? 'lg:w-20' : 'lg:w-72'
-        }`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ease-in-out ${collapsed ? 'lg:w-20' : 'lg:w-72'
+          }`}
       >
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-xl">
           {/* Logo & Toggle */}
-          <div className="flex items-center justify-between h-16 px-6 bg-emerald-600 relative overflow-hidden">
+          <div className="flex items-center justify-between h-16 px-6 bg-white relative overflow-hidden border-b border-gray-200">
             {!collapsed && (
-              <h1 className="text-2xl font-bold text-white relative z-10 tracking-tight">
-                {shopName}<span className="text-emerald-200">.</span>
-              </h1>
+              <div className="relative h-12 w-40">
+                <Image
+                  src="/Logo.jpeg"
+                  alt={shopName}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
             )}
             {collapsed && (
-              <h1 className="text-2xl font-bold text-white relative z-10">{shopName?.[0]?.toUpperCase() || 'B'}</h1>
+              <div className="relative h-10 w-10">
+                <Image
+                  src="/Logo.jpeg"
+                  alt={shopName}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
             )}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="relative z-10 p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all duration-200"
+              className="relative z-10 p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
               title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? (
@@ -103,7 +117,7 @@ export default function DashboardLayout({ children }) {
               const isActive = exactMatch
                 ? pathname === item.href
                 : (pathname === item.href ||
-                   (item.href !== '/dashboard' && pathname.startsWith(item.href + '/')));
+                  (item.href !== '/dashboard' && pathname.startsWith(item.href + '/')));
 
               const Icon = item.icon;
 
@@ -111,16 +125,14 @@ export default function DashboardLayout({ children }) {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 relative overflow-hidden ${
-                    isActive
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/50'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 relative overflow-hidden ${isActive
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/50'
+                    : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                   title={collapsed ? item.name : ''}
                 >
-                  <Icon className={`flex-shrink-0 relative z-10 ${
-                    collapsed ? 'w-6 h-6 mx-auto' : 'w-5 h-5 mr-3'
-                  } ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'}`} />
+                  <Icon className={`flex-shrink-0 relative z-10 ${collapsed ? 'w-6 h-6 mx-auto' : 'w-5 h-5 mr-3'
+                    } ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'}`} />
                   {!collapsed && (
                     <span className="relative z-10 truncate">{item.name}</span>
                   )}
@@ -173,13 +185,19 @@ export default function DashboardLayout({ children }) {
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <div className="relative flex flex-col w-80 h-full bg-white shadow-2xl transform transition-transform duration-300">
-            <div className="flex items-center justify-between h-16 px-6 bg-emerald-600">
-              <h1 className="text-2xl font-bold text-white tracking-tight">
-                {shopName}<span className="text-emerald-200">.</span>
-              </h1>
+            <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200">
+              <div className="relative h-12 w-40">
+                <Image
+                  src="/Logo.jpeg"
+                  alt={shopName}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <button
                 onClick={() => setSidebarOpen(false)}
-                className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-all"
+                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
               >
                 <HiX className="w-6 h-6" />
               </button>
@@ -190,22 +208,20 @@ export default function DashboardLayout({ children }) {
                 const isActive = exactMatch
                   ? pathname === item.href
                   : (pathname === item.href ||
-                     (item.href !== '/dashboard' && pathname.startsWith(item.href + '/')));
+                    (item.href !== '/dashboard' && pathname.startsWith(item.href + '/')));
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
                     onClick={() => setSidebarOpen(false)}
-                    className={`group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all ${
-                      isActive
-                        ? 'bg-emerald-600 text-white shadow-lg'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className={`group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all ${isActive
+                      ? 'bg-emerald-600 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                   >
-                    <Icon className={`w-5 h-5 mr-3 flex-shrink-0 ${
-                      isActive ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'
-                    }`} />
+                    <Icon className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'
+                      }`} />
                     <span className="truncate">{item.name}</span>
                   </Link>
                 );
@@ -245,9 +261,15 @@ export default function DashboardLayout({ children }) {
           >
             <HiMenu className="w-6 h-6" />
           </button>
-          <h1 className="text-xl font-bold text-emerald-600">
-            {shopName}
-          </h1>
+          <div className="relative h-10 w-32">
+            <Image
+              src="/Logo.jpeg"
+              alt={shopName}
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
           <div className="w-10"></div>
         </div>
 

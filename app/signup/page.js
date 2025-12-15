@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import Image from 'next/image';
 import { HiMail, HiLockClosed, HiUser, HiArrowRight } from 'react-icons/hi';
 import { APP_CONFIG } from '@/config/appConfig';
 
@@ -63,8 +64,14 @@ export default function Signup() {
         {/* Logo/Brand */}
         <div className="text-center mb-10">
           <div className="inline-block mb-4">
-            <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-2xl font-bold text-white">{shopName[0]?.toUpperCase()}</span>
+            <div className="relative h-20 w-48">
+              <Image
+                src="/digistriveLogo.png"
+                alt={shopName}
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-1">{shopName}</h1>

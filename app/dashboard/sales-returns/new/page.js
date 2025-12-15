@@ -202,7 +202,7 @@ export default function NewSalesReturnPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 text-black">
           {/* Invoice Selection */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Invoice</h2>

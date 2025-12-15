@@ -567,15 +567,36 @@ export default function ReportsPage() {
         <div className="bg-white rounded-lg shadow print-content">
           {/* Print-only header */}
           <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {tabs.find(t => t.id === activeTab)?.name} Report
-            </h1>
-            <p className="text-sm text-gray-600 mt-2">
-              Period: {new Date(dateRange.startDate).toLocaleDateString('en-IN')} to {new Date(dateRange.endDate).toLocaleDateString('en-IN')}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Generated on: {new Date().toLocaleString('en-IN')}
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="relative h-16 w-40">
+                <img
+                  src="/Logo.jpeg"
+                  alt={shopName}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div className="text-right">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {tabs.find(t => t.id === activeTab)?.name} Report
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  {shopSettings?.shopName || shopName}
+                </p>
+              </div>
+            </div>
+            <div className="text-sm text-gray-600">
+              <p>
+                <strong>Period:</strong> {new Date(dateRange.startDate).toLocaleDateString('en-IN')} to {new Date(dateRange.endDate).toLocaleDateString('en-IN')}
+              </p>
+              <p className="mt-1">
+                <strong>Generated on:</strong> {new Date().toLocaleString('en-IN')}
+              </p>
+              {shopSettings?.gstin && (
+                <p className="mt-1">
+                  <strong>GSTIN:</strong> {shopSettings.gstin}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="border-b border-gray-200 no-print">
@@ -584,11 +605,10 @@ export default function ReportsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-col items-center">
                     <span>{tab.name}</span>

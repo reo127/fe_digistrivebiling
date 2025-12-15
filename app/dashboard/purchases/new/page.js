@@ -56,6 +56,26 @@ export default function NewPurchasePage() {
     notes: ''
   });
 
+  // Product modal state
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [currentItemIndex, setCurrentItemIndex] = useState(null);
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    genericName: '',
+    manufacturer: '',
+    composition: '',
+    hsnCode: '',
+    gstRate: 12,
+    mrp: 0,
+    sellingPrice: 0,
+    purchasePrice: 0,
+    stockQuantity: 0,
+    minStockLevel: 10,
+    unit: 'PCS',
+    rack: ''
+  });
+
   useEffect(() => {
     loadData();
   }, []);
@@ -131,6 +151,50 @@ export default function NewPurchasePage() {
       alert(error.message);
     } finally {
       setSavingSupplier(false);
+    }
+  };
+
+  const handleProductFormChange = (e) => {
+    const { name, value } = e.target;
+    setProductFormData({ ...productFormData, [name]: value });
+  };
+
+  const handleCreateProduct = async (e) => {
+    e.preventDefault();
+    setSavingProduct(true);
+
+    try {
+      const newProduct = await productsAPI.create(productFormData);
+      // Reload products list
+      const productsData = await productsAPI.getAll();
+      setProducts(productsData);
+      // Auto-select the newly created product in the current item
+      if (currentItemIndex !== null) {
+        updateItem(currentItemIndex, 'product', newProduct._id);
+      }
+      // Close modal and reset form
+      setShowProductModal(false);
+      setCurrentItemIndex(null);
+      setProductFormData({
+        name: '',
+        genericName: '',
+        manufacturer: '',
+        composition: '',
+        hsnCode: '',
+        gstRate: 12,
+        mrp: 0,
+        sellingPrice: 0,
+        purchasePrice: 0,
+        stockQuantity: 0,
+        minStockLevel: 10,
+        unit: 'PCS',
+        rack: ''
+      });
+      alert('Product added successfully!');
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setSavingProduct(false);
     }
   };
 
@@ -262,7 +326,7 @@ export default function NewPurchasePage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 text-black">
           {/* Basic Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Purchase Details</h2>
@@ -375,19 +439,32 @@ export default function NewPurchasePage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Product <span className="text-red-500">*</span>
                         </label>
-                        <select
-                          value={item.product}
-                          onChange={(e) => updateItem(index, 'product', e.target.value)}
-                          required
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                        >
-                          <option value="">Select Product</option>
-                          {products.map((product) => (
-                            <option key={product._id} value={product._id}>
-                              {product.name} - {product.genericName}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex gap-2">
+                          <select
+                            value={item.product}
+                            onChange={(e) => updateItem(index, 'product', e.target.value)}
+                            required
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          >
+                            <option value="">Select Product</option>
+                            {products.map((product) => (
+                              <option key={product._id} value={product._id}>
+                                {product.name} - {product.genericName}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentItemIndex(index);
+                              setShowProductModal(true);
+                            }}
+                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                            title="Add New Product"
+                          >
+                            <HiPlus className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
 
                       <div>
@@ -961,6 +1038,252 @@ export default function NewPurchasePage() {
               className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
             >
               {savingSupplier ? 'Saving...' : 'Add Supplier'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+
+      {/* New Product Modal */}
+      <Modal
+        isOpen={showProductModal}
+        onClose={() => {
+          setShowProductModal(false);
+          setCurrentItemIndex(null);
+        }}
+        title="Add New Product"
+        size="max-w-4xl"
+      >
+        <form onSubmit={handleCreateProduct} className="space-y-6">
+          {/* Basic Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={productFormData.name}
+                  onChange={handleProductFormChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Generic Name
+                </label>
+                <input
+                  type="text"
+                  name="genericName"
+                  value={productFormData.genericName}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Manufacturer
+                </label>
+                <input
+                  type="text"
+                  name="manufacturer"
+                  value={productFormData.manufacturer}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Composition
+                </label>
+                <input
+                  type="text"
+                  name="composition"
+                  value={productFormData.composition}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  HSN Code
+                </label>
+                <input
+                  type="text"
+                  name="hsnCode"
+                  value={productFormData.hsnCode}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Unit
+                </label>
+                <select
+                  name="unit"
+                  value={productFormData.unit}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="PCS">Pieces</option>
+                  <option value="BOX">Box</option>
+                  <option value="STRIP">Strip</option>
+                  <option value="BOTTLE">Bottle</option>
+                  <option value="KG">KG</option>
+                  <option value="LITRE">Litre</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  MRP (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="mrp"
+                  value={productFormData.mrp}
+                  onChange={handleProductFormChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Selling Price (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="sellingPrice"
+                  value={productFormData.sellingPrice}
+                  onChange={handleProductFormChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Purchase Price (₹)
+                </label>
+                <input
+                  type="number"
+                  name="purchasePrice"
+                  value={productFormData.purchasePrice}
+                  onChange={handleProductFormChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  GST Rate (%)
+                </label>
+                <select
+                  name="gstRate"
+                  value={productFormData.gstRate}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="0">0%</option>
+                  <option value="5">5%</option>
+                  <option value="12">12%</option>
+                  <option value="18">18%</option>
+                  <option value="28">28%</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Stock Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Stock Quantity
+                </label>
+                <input
+                  type="number"
+                  name="stockQuantity"
+                  value={productFormData.stockQuantity}
+                  onChange={handleProductFormChange}
+                  min="0"
+                  step="1"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Min Stock Level
+                </label>
+                <input
+                  type="number"
+                  name="minStockLevel"
+                  value={productFormData.minStockLevel}
+                  onChange={handleProductFormChange}
+                  min="0"
+                  step="1"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rack/Location
+                </label>
+                <input
+                  type="text"
+                  name="rack"
+                  value={productFormData.rack}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end gap-4 pt-4 border-t">
+            <button
+              type="button"
+              onClick={() => {
+                setShowProductModal(false);
+                setCurrentItemIndex(null);
+              }}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingProduct}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {savingProduct ? 'Saving...' : 'Add Product'}
             </button>
           </div>
         </form>
