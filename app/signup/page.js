@@ -1,69 +1,236 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
-/**
- * SIGNUP PAGE - DISABLED
- * 
- * This page is intentionally disabled for security reasons.
- * New users can only be created via API calls (e.g., using Postman).
- * 
- * To create a new user, make a POST request to:
- * POST http://localhost:5000/api/auth/signup
- * 
- * Request body:
- * {
- *   "name": "User Name",
- *   "email": "user@example.com",
- *   "password": "password123"
- * }
- * 
- * The backend API endpoint remains fully functional.
- */
+import Link from 'next/link';
+import Image from 'next/image';
+import { HiMail, HiLockClosed, HiUser, HiArrowRight } from 'react-icons/hi';
+import { APP_CONFIG } from '@/config/appConfig';
 
 export default function Signup() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [shopName, setShopName] = useState(APP_CONFIG.shopName);
+  const [authorized, setAuthorized] = useState(false);
+  const { signup, user } = useAuth();
   const router = useRouter();
 
+  // Check if user is superadmin
   useEffect(() => {
-    // Redirect to login page after 3 seconds
-    const timer = setTimeout(() => {
-      router.push('/login');
-    }, 3000);
+    // Allow access if no user is logged in (for initial superadmin creation)
+    // OR if logged in user is superadmin
+    const storedUser = localStorage.getItem('user');
 
-    return () => clearTimeout(timer);
+    if (!storedUser) {
+      // No user logged in - allow access for initial setup
+      setAuthorized(true);
+    } else {
+      const userData = JSON.parse(storedUser);
+      if (userData.role === 'superadmin') {
+        setAuthorized(true);
+      } else {
+        // Not a superadmin, redirect to dashboard
+        router.push('/dashboard');
+      }
+    }
   }, [router]);
+
+  useEffect(() => {
+    const fetchShopName = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL} /shop/public / name`);
+        const data = await response.json();
+        if (data.shopName) {
+          setShopName(data.shopName);
+        }
+      } catch (error) {
+        console.error('Error fetching shop name:', error);
+        // Keep default name from APP_CONFIG
+      }
+    };
+    fetchShopName();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await signup({ name, email, password });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Show loading while checking authorization
+  if (!authorized) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authorization...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center">
-        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-8">
-          <svg
-            className="w-16 h-16 text-yellow-500 mx-auto mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Registration Disabled
-          </h1>
-          <p className="text-gray-600 mb-4">
-            User registration through the web interface is disabled.
-          </p>
-          <p className="text-sm text-gray-500 mb-6">
-            New users can only be created by administrators via API.
-          </p>
-          <p className="text-xs text-gray-400">
-            Redirecting to login page...
-          </p>
+      <div className="w-full max-w-md">
+        {/* Logo/Brand */}
+        <div className="text-center mb-10">
+          <div className="inline-block mb-4">
+            <div className="relative h-20 w-48">
+              <Image
+                src="/digistriveLogo.png"
+                alt={shopName}
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">{shopName}</h1>
+          <p className="text-gray-600 text-sm">Professional Billing Software</p>
         </div>
+
+        {/* Signup Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">Create an account</h2>
+            <p className="text-sm text-gray-600">Get started with your free account</p>
+          </div>
+
+          {error && (
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 text-black">
+            <div>
+              <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+                Full name
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <HiUser className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                  placeholder="John Doe"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                Email address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <HiMail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <HiLockClosed className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                  placeholder="Minimum 6 characters"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
+                Confirm password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <HiLockClosed className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm transition-all"
+                  placeholder="Re-enter password"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create account
+                  <HiArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs text-gray-500 mt-8">
+          © {APP_CONFIG.copyrightYear} {shopName}. All rights reserved.
+        </p>
       </div>
     </div>
   );
