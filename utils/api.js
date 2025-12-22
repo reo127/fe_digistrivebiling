@@ -98,6 +98,8 @@ export const invoicesAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
+  // Note: Invoices cannot be edited or deleted after creation due to inventory/accounting implications
+  // Use sales returns instead for corrections
 };
 
 // Suppliers API
@@ -141,6 +143,8 @@ export const purchasesAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
+  // Note: Purchases cannot be edited or deleted after creation due to inventory/accounting implications
+  // Use purchase returns instead for corrections
 };
 
 // Purchase Returns API
