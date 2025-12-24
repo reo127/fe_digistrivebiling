@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import PageLoader from '@/components/PageLoader';
 import { purchasesAPI, shopAPI } from '@/utils/api';
 
 export default function PurchaseDetail() {
@@ -75,11 +76,7 @@ export default function PurchaseDetail() {
   };
 
   if (loading || !user || loadingPurchase) {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12">Loading...</div>
-      </DashboardLayout>
-    );
+    return <PageLoader text="Loading purchase details..." />;
   }
 
   if (!purchase) {

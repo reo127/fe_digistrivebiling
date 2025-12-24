@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import PageLoader from '@/components/PageLoader';
 import { salesReturnsAPI, shopAPI } from '@/utils/api';
 
 export default function SalesReturnDetail() {
@@ -57,11 +58,7 @@ export default function SalesReturnDetail() {
     };
 
     if (loading || !user || loadingReturn) {
-        return (
-            <DashboardLayout>
-                <div className="text-center py-12">Loading...</div>
-            </DashboardLayout>
-        );
+        return <PageLoader text="Loading return details..." />;
     }
 
     if (!salesReturn) {

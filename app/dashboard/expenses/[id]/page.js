@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import PageLoader from '@/components/PageLoader';
 import { expensesAPI, shopAPI } from '@/utils/api';
 
 export default function ExpenseDetail() {
@@ -57,11 +58,7 @@ export default function ExpenseDetail() {
   };
 
   if (loading || !user || loadingExpense) {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12">Loading...</div>
-      </DashboardLayout>
-    );
+    return <PageLoader text="Loading expense details..." />;
   }
 
   if (!expense) {

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import PageLoader from '@/components/PageLoader';
 import { invoicesAPI, shopAPI } from '@/utils/api';
 
 export default function InvoiceDetail() {
@@ -82,11 +83,7 @@ export default function InvoiceDetail() {
   };
 
   if (loading || !user || loadingInvoice) {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-12">Loading...</div>
-      </DashboardLayout>
-    );
+    return <PageLoader text="Loading invoice details..." />;
   }
 
   if (!invoice) {

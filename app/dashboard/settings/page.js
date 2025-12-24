@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { shopAPI } from '@/utils/api';
 import {
   HiCog,
@@ -324,8 +325,8 @@ export default function Settings() {
             >
               {saving ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Saving...
+                  <LoadingSpinner size="sm" text="" />
+                  <span className="ml-2">Saving...</span>
                 </>
               ) : (
                 <>

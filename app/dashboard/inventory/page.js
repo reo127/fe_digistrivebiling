@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
+import PageLoader from '@/components/PageLoader';
 import { inventoryAPI, productsAPI } from '@/utils/api';
 import { HiSearch, HiExclamationCircle, HiClock, HiBan } from 'react-icons/hi';
 
@@ -100,13 +101,7 @@ export default function InventoryPage() {
   const tabData = getTabData();
 
   if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">Loading...</div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageLoader text="Loading inventory..." />;
   }
 
   return (
