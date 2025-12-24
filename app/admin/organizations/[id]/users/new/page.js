@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -10,6 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 export default function AddUser() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+  const toast = useToast();
     const params = useParams();
     const [loading, setLoading] = useState(false);
     const [organization, setOrganization] = useState(null);
@@ -55,7 +57,7 @@ export default function AddUser() {
             setOrganization(response.data.organization);
         } catch (error) {
             console.error('Error fetching organization:', error);
-            alert('Failed to load organization');
+            toast.error('Failed to load organization');
         }
     };
 
@@ -138,11 +140,11 @@ export default function AddUser() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            alert('User created successfully!');
+            toast.success('User created successfully!');
             router.push(`/admin/organizations/${params.id}`);
         } catch (error) {
             console.error('Error creating user:', error);
-            alert(error.response?.data?.message || 'Failed to create user');
+            toast.error(error.response?.data?.message || 'Failed to create user');
         } finally {
             setLoading(false);
         }

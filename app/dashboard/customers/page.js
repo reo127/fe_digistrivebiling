@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { TableSkeleton } from '@/components/SkeletonLoader';
 import { customersAPI } from '@/utils/api';
 import {
   HiPlus,
@@ -20,6 +22,7 @@ import {
 export default function Customers() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [customers, setCustomers] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -67,7 +70,7 @@ export default function Customers() {
       resetForm();
       loadCustomers();
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -92,7 +95,7 @@ export default function Customers() {
         await customersAPI.delete(id);
         loadCustomers();
       } catch (error) {
-        alert(error.message);
+        toast.error(error.message || 'An error occurred');
       }
     }
   };
@@ -159,6 +162,11 @@ export default function Customers() {
           </div>
 
           {/* Table */}
+          {loadingCustomers ? (
+            <div className="p-4">
+              <TableSkeleton rows={8} columns={6} />
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -184,16 +192,7 @@ export default function Customers() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {loadingCustomers ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="text-gray-500">Loading customers...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : customers.length === 0 ? (
+                {customers.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center">
@@ -282,6 +281,7 @@ export default function Customers() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
 

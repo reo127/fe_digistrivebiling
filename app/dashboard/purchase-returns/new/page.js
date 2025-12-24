@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/context/ToastContext';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -9,6 +10,7 @@ import Link from 'next/link';
 
 export default function NewPurchaseReturnPage() {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [purchases, setPurchases] = useState([]);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
@@ -30,7 +32,7 @@ export default function NewPurchaseReturnPage() {
       setPurchases(data);
     } catch (error) {
       console.error('Error loading purchases:', error);
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -46,14 +48,14 @@ export default function NewPurchaseReturnPage() {
       setSelectedPurchase(purchase);
       setFormData({ ...formData, purchase: purchaseId, items: [] });
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
   const addItemToReturn = (purchaseItem) => {
     const alreadyAdded = formData.items.find(item => item.product === purchaseItem.product._id);
     if (alreadyAdded) {
-      alert('Item already added to return list');
+      toast.warning('Item already added to return list');
       return;
     }
 
@@ -85,7 +87,7 @@ export default function NewPurchaseReturnPage() {
     const maxQty = newItems[index].maxQuantity;
 
     if (quantity > maxQty) {
-      alert(`Maximum returnable quantity is ${maxQty}`);
+      toast.warning(`Maximum returnable quantity is ${maxQty}`);
       return;
     }
 
@@ -114,17 +116,17 @@ export default function NewPurchaseReturnPage() {
     e.preventDefault();
 
     if (!formData.purchase) {
-      alert('Please select a purchase');
+      toast.warning('Please select a purchase');
       return;
     }
 
     if (formData.items.length === 0) {
-      alert('Please add at least one item to return');
+      toast.warning('Please add at least one item to return');
       return;
     }
 
     if (!formData.reason) {
-      alert('Please enter reason for return');
+      toast.warning('Please enter reason for return');
       return;
     }
 
@@ -141,10 +143,10 @@ export default function NewPurchaseReturnPage() {
       };
 
       await purchaseReturnsAPI.create(returnData);
-      alert('Purchase return created successfully!');
+      toast.success('Purchase return created successfully!');
       router.push('/dashboard/purchase-returns');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }

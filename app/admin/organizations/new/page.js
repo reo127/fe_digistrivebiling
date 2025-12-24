@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -10,6 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 export default function NewOrganization() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+  const toast = useToast();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         organizationName: '',
@@ -56,11 +58,11 @@ export default function NewOrganization() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            alert('Organization created successfully!');
+            toast.success('Organization created successfully!');
             router.push('/admin/organizations');
         } catch (error) {
             console.error('Error creating organization:', error);
-            alert(error.response?.data?.message || 'Failed to create organization');
+            toast.error(error.response?.data?.message || 'Failed to create organization');
         } finally {
             setLoading(false);
         }

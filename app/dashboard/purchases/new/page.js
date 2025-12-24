@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/context/ToastContext';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -10,6 +11,7 @@ import Link from 'next/link';
 
 export default function NewPurchasePage() {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -90,7 +92,7 @@ export default function NewPurchasePage() {
       setProducts(productsData);
     } catch (error) {
       console.error('Error loading data:', error);
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -146,9 +148,9 @@ export default function NewPurchasePage() {
         openingBalance: 0,
         notes: ''
       });
-      alert('Supplier added successfully!');
+      toast.success('Supplier added successfully!');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setSavingSupplier(false);
     }
@@ -190,9 +192,9 @@ export default function NewPurchasePage() {
         unit: 'PCS',
         rack: ''
       });
-      alert('Product added successfully!');
+      toast.success('Product added successfully!');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setSavingProduct(false);
     }
@@ -255,12 +257,12 @@ export default function NewPurchasePage() {
     e.preventDefault();
 
     if (formData.items.length === 0) {
-      alert('Please add at least one item');
+      toast.warning('Please add at least one item');
       return;
     }
 
     if (!formData.supplier) {
-      alert('Please select a supplier');
+      toast.warning('Please select a supplier');
       return;
     }
 
@@ -268,23 +270,23 @@ export default function NewPurchasePage() {
     for (let i = 0; i < formData.items.length; i++) {
       const item = formData.items[i];
       if (!item.product) {
-        alert(`Please select product for item ${i + 1}`);
+        toast.warning(`Please select product for item ${i + 1}`);
         return;
       }
       if (!item.batchNo) {
-        alert(`Please enter batch number for item ${i + 1}`);
+        toast.warning(`Please enter batch number for item ${i + 1}`);
         return;
       }
       if (!item.expiryDate) {
-        alert(`Please enter expiry date for item ${i + 1}`);
+        toast.warning(`Please enter expiry date for item ${i + 1}`);
         return;
       }
       if (item.quantity <= 0) {
-        alert(`Please enter valid quantity for item ${i + 1}`);
+        toast.warning(`Please enter valid quantity for item ${i + 1}`);
         return;
       }
       if (item.purchasePrice <= 0) {
-        alert(`Please enter valid purchase price for item ${i + 1}`);
+        toast.warning(`Please enter valid purchase price for item ${i + 1}`);
         return;
       }
     }
@@ -301,10 +303,10 @@ export default function NewPurchasePage() {
       };
 
       await purchasesAPI.create(purchaseData);
-      alert('Purchase entry added successfully!');
+      toast.success('Purchase entry added successfully!');
       router.push('/dashboard/purchases');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }

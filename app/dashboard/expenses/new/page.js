@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/context/ToastContext';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -9,6 +10,7 @@ import Link from 'next/link';
 
 export default function NewExpensePage() {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     category: 'MISCELLANEOUS',
@@ -80,12 +82,12 @@ export default function NewExpensePage() {
     e.preventDefault();
 
     if (!formData.description) {
-      alert('Please enter expense description');
+      toast.warning('Please enter expense description');
       return;
     }
 
     if (formData.amount <= 0) {
-      alert('Please enter valid amount');
+      toast.warning('Please enter valid amount');
       return;
     }
 
@@ -93,10 +95,10 @@ export default function NewExpensePage() {
 
     try {
       await expensesAPI.create(formData);
-      alert('Expense added successfully!');
+      toast.success('Expense added successfully!');
       router.push('/dashboard/expenses');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }

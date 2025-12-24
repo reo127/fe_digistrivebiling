@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import Modal from '@/components/Modal';
 import { productsAPI, customersAPI, invoicesAPI, shopAPI } from '@/utils/api';
@@ -11,6 +12,7 @@ import { HiPlus, HiSearch, HiX } from 'react-icons/hi';
 export default function NewInvoice() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [shopSettings, setShopSettings] = useState(null);
@@ -116,9 +118,9 @@ export default function NewInvoice() {
         state: '',
         pincode: '',
       });
-      alert('Customer added successfully!');
+      toast.success('Customer added successfully!');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'Failed to add customer');
     } finally {
       setSavingCustomer(false);
     }
@@ -207,7 +209,7 @@ export default function NewInvoice() {
     e.preventDefault();
 
     if (invoiceItems.length === 0) {
-      alert('Please add at least one item');
+      toast.warning('Please add at least one item');
       return;
     }
 
@@ -237,10 +239,10 @@ export default function NewInvoice() {
       };
 
       const invoice = await invoicesAPI.create(invoiceData);
-      alert('Invoice created successfully!');
+      toast.success('Invoice created successfully!');
       router.push(`/dashboard/invoices/${invoice._id}`);
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'Failed to create invoice');
     } finally {
       setSubmitting(false);
     }

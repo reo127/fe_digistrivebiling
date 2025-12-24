@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -10,6 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 export default function OrganizationDetail() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+  const toast = useToast();
     const params = useParams();
     const [organization, setOrganization] = useState(null);
     const [users, setUsers] = useState([]);
@@ -38,7 +40,7 @@ export default function OrganizationDetail() {
             setUsers(response.data.organization.users || []);
         } catch (error) {
             console.error('Error fetching organization:', error);
-            alert('Failed to load organization');
+            toast.error('Failed to load organization');
         } finally {
             setLoading(false);
         }
@@ -54,11 +56,11 @@ export default function OrganizationDetail() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            alert('User deleted successfully');
+            toast.success('User deleted successfully!');
             fetchOrganization();
         } catch (error) {
             console.error('Error deleting user:', error);
-            alert('Failed to delete user');
+            toast.error('Failed to delete user');
         }
     };
 

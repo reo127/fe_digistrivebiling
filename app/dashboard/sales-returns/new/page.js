@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/context/ToastContext';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -9,6 +10,7 @@ import Link from 'next/link';
 
 export default function NewSalesReturnPage() {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [invoices, setInvoices] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -33,7 +35,7 @@ export default function NewSalesReturnPage() {
       setInvoices(data);
     } catch (error) {
       console.error('Error loading invoices:', error);
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -49,7 +51,7 @@ export default function NewSalesReturnPage() {
       setSelectedInvoice(invoice);
       setFormData({ ...formData, originalInvoice: invoiceId, items: [] });
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -61,14 +63,14 @@ export default function NewSalesReturnPage() {
       item.product === productId
     );
     if (alreadyAdded) {
-      alert('Item already added to return list');
+      toast.warning('Item already added to return list');
       return;
     }
 
     const maxReturnableQty = invoiceItem.quantity - (invoiceItem.returnedQuantity || 0);
 
     if (maxReturnableQty <= 0) {
-      alert('This item has already been fully returned');
+      toast.warning('This item has already been fully returned');
       return;
     }
 
@@ -102,7 +104,7 @@ export default function NewSalesReturnPage() {
     const maxQty = newItems[index].maxQuantity;
 
     if (quantity > maxQty) {
-      alert(`Maximum returnable quantity is ${maxQty}`);
+      toast.warning(`Maximum returnable quantity is ${maxQty}`);
       return;
     }
 
@@ -141,17 +143,17 @@ export default function NewSalesReturnPage() {
     e.preventDefault();
 
     if (!formData.originalInvoice) {
-      alert('Please select an invoice');
+      toast.warning('Please select an invoice');
       return;
     }
 
     if (formData.items.length === 0) {
-      alert('Please add at least one item to return');
+      toast.warning('Please add at least one item to return');
       return;
     }
 
     if (!formData.reason) {
-      alert('Please select reason for return');
+      toast.warning('Please select reason for return');
       return;
     }
 
@@ -176,11 +178,11 @@ export default function NewSalesReturnPage() {
       };
 
       await salesReturnsAPI.create(returnData);
-      alert('Sales return created successfully!');
+      toast.success('Sales return created successfully!');
       router.push('/dashboard/sales-returns');
     } catch (error) {
       console.error('Sales return error:', error);
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }

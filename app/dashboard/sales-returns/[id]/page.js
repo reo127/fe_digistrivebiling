@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { salesReturnsAPI, shopAPI } from '@/utils/api';
 
 export default function SalesReturnDetail() {
     const { user, loading } = useAuth();
     const router = useRouter();
+  const toast = useToast();
     const params = useParams();
     const [salesReturn, setSalesReturn] = useState(null);
     const [shopSettings, setShopSettings] = useState(null);
@@ -29,7 +31,7 @@ export default function SalesReturnDetail() {
             setSalesReturn(data);
         } catch (error) {
             console.error('Error loading sales return:', error);
-            alert('Sales return not found');
+            toast.error('Sales return not found');
             router.push('/dashboard/sales-returns');
         } finally {
             setLoadingReturn(false);
@@ -48,7 +50,7 @@ export default function SalesReturnDetail() {
     const handleDownload = () => {
         const hasSeenTip = localStorage.getItem('pdfPrintTipSeen');
         if (!hasSeenTip) {
-            alert('Tip: In the print dialog select Save as PDF. Turn OFF Headers and footers in More settings.');
+            toast.info('Tip: Turn OFF "Headers and footers" in print dialog for clean PDF', 6000);
             localStorage.setItem('pdfPrintTipSeen', 'true');
         }
         window.print();

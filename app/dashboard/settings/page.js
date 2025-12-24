@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { shopAPI } from '@/utils/api';
 import {
@@ -21,6 +22,7 @@ import {
 export default function Settings() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     shopName: '',
     ownerName: '',

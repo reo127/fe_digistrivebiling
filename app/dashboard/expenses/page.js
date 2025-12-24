@@ -1,14 +1,17 @@
 'use client';
 
+import { useToast } from '@/context/ToastContext';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
+import { TableSkeleton } from '@/components/SkeletonLoader';
 import { expensesAPI } from '@/utils/api';
 import { HiPlus, HiSearch, HiPencil, HiTrash } from 'react-icons/hi';
 import Link from 'next/link';
 
 export default function ExpensesPage() {
   const router = useRouter();
+  const toast = useToast();
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -36,7 +39,7 @@ export default function ExpensesPage() {
       setStats(statsData);
     } catch (error) {
       console.error('Error loading expenses:', error);
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -49,7 +52,7 @@ export default function ExpensesPage() {
       await expensesAPI.delete(id);
       loadData();
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -69,16 +72,6 @@ export default function ExpensesPage() {
       word.charAt(0) + word.slice(1).toLowerCase()
     ).join(' ');
   };
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">Loading...</div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
@@ -158,6 +151,11 @@ export default function ExpensesPage() {
 
         {/* Expenses Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          {loading ? (
+            <div className="p-4">
+              <TableSkeleton rows={8} columns={7} />
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -242,6 +240,7 @@ export default function ExpensesPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

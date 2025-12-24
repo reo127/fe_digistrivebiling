@@ -1,14 +1,17 @@
 'use client';
 
+import { useToast } from '@/context/ToastContext';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
+import { TableSkeleton } from '@/components/SkeletonLoader';
 import { purchasesAPI } from '@/utils/api';
 import { HiPlus, HiSearch, HiEye, HiCurrencyRupee } from 'react-icons/hi';
 import Link from 'next/link';
 
 export default function PurchasesPage() {
   const router = useRouter();
+  const toast = useToast();
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -28,7 +31,7 @@ export default function PurchasesPage() {
       setStats(statsData);
     } catch (error) {
       console.error('Error loading purchases:', error);
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -48,16 +51,6 @@ export default function PurchasesPage() {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">Loading...</div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
@@ -121,6 +114,11 @@ export default function PurchasesPage() {
 
         {/* Purchases Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
+          {loading ? (
+            <div className="p-4">
+              <TableSkeleton rows={8} columns={8} />
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -206,6 +204,7 @@ export default function PurchasesPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

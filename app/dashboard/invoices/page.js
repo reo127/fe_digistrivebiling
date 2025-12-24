@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { TableSkeleton } from '@/components/SkeletonLoader';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { invoicesAPI } from '@/utils/api';
 import Link from 'next/link';
 import { HiEye, HiPencil, HiTrash } from 'react-icons/hi';
@@ -11,6 +14,7 @@ import { HiEye, HiPencil, HiTrash } from 'react-icons/hi';
 export default function Invoices() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [invoices, setInvoices] = useState([]);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -45,10 +49,10 @@ export default function Invoices() {
 
     try {
       await invoicesAPI.delete(invoiceId);
-      alert('Invoice deleted successfully');
+      toast.success('Invoice deleted successfully');
       loadInvoices(); // Reload the list
     } catch (error) {
-      alert(error.message || 'Failed to delete invoice');
+      toast.error(error.message || 'Failed to delete invoice');
     }
   };
 
@@ -91,6 +95,11 @@ export default function Invoices() {
 
         {/* Invoices Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          {loadingInvoices ? (
+            <div className="p-4">
+              <TableSkeleton rows={8} columns={6} />
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -116,13 +125,7 @@ export default function Invoices() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {loadingInvoices ? (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                      Loading...
-                    </td>
-                  </tr>
-                ) : invoices.length === 0 ? (
+                {invoices.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                       No invoices found. Create your first invoice!
@@ -197,6 +200,7 @@ export default function Invoices() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

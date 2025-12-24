@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { purchasesAPI, shopAPI } from '@/utils/api';
 
 export default function PurchaseDetail() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const params = useParams();
   const [purchase, setPurchase] = useState(null);
   const [shopSettings, setShopSettings] = useState(null);
@@ -32,7 +34,7 @@ export default function PurchaseDetail() {
       setPurchase(data);
     } catch (error) {
       console.error('Error loading purchase:', error);
-      alert('Purchase not found');
+      toast.error('Purchase not found');
       router.push('/dashboard/purchases');
     } finally {
       setLoadingPurchase(false);
@@ -51,7 +53,7 @@ export default function PurchaseDetail() {
   const handleDownload = () => {
     const hasSeenTip = localStorage.getItem('pdfPrintTipSeen');
     if (!hasSeenTip) {
-      alert('💡 Tip: In the print dialog:\n\n1. Select "Save as PDF" as destination\n2. In "More settings", turn OFF "Headers and footers"\n3. Click Save\n\n(This message won\'t show again)');
+      toast.info('Tip: Turn OFF "Headers and footers" in print dialog for clean PDF', 6000);
       localStorage.setItem('pdfPrintTipSeen', 'true');
     }
     window.print();
@@ -66,9 +68,9 @@ export default function PurchaseDetail() {
       });
       setShowPaymentModal(false);
       loadPurchase();
-      alert('Payment updated successfully!');
+      toast.success('Payment updated successfully!');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 

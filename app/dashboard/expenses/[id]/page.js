@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { expensesAPI, shopAPI } from '@/utils/api';
 
 export default function ExpenseDetail() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const params = useParams();
   const [expense, setExpense] = useState(null);
   const [shopSettings, setShopSettings] = useState(null);
@@ -29,7 +31,7 @@ export default function ExpenseDetail() {
       setExpense(data);
     } catch (error) {
       console.error('Error loading expense:', error);
-      alert('Expense not found');
+      toast.error('Expense not found');
       router.push('/dashboard/expenses');
     } finally {
       setLoadingExpense(false);
@@ -48,7 +50,7 @@ export default function ExpenseDetail() {
   const handleDownload = () => {
     const hasSeenTip = localStorage.getItem('pdfPrintTipSeen');
     if (!hasSeenTip) {
-      alert('💡 Tip: In the print dialog:\n\n1. Select "Save as PDF" as destination\n2. In "More settings", turn OFF "Headers and footers"\n3. Click Save\n\n(This message won\'t show again)');
+      toast.info('Tip: Turn OFF "Headers and footers" in print dialog for clean PDF', 6000);
       localStorage.setItem('pdfPrintTipSeen', 'true');
     }
     window.print();

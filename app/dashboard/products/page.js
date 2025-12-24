@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import { TableSkeleton } from '@/components/SkeletonLoader';
 import { productsAPI } from '@/utils/api';
 import {
   HiPlus,
@@ -18,6 +20,7 @@ import {
 export default function Products() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -72,7 +75,7 @@ export default function Products() {
       resetForm();
       loadProducts();
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -104,7 +107,7 @@ export default function Products() {
         await productsAPI.delete(id);
         loadProducts();
       } catch (error) {
-        alert(error.message);
+        toast.error(error.message || 'An error occurred');
       }
     }
   };
@@ -195,6 +198,11 @@ export default function Products() {
           </div>
 
           {/* Table */}
+          {loadingProducts ? (
+            <div className="p-4">
+              <TableSkeleton rows={8} columns={7} />
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -223,16 +231,7 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {loadingProducts ? (
-                  <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="text-gray-500">Loading products...</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : products.length === 0 ? (
+                {products.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center justify-center">
@@ -308,6 +307,7 @@ export default function Products() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
 

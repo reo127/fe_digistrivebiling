@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/context/ToastContext';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -9,6 +10,7 @@ import Link from 'next/link';
 
 export default function NewSupplierPage() {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -56,10 +58,10 @@ export default function NewSupplierPage() {
 
     try {
       await suppliersAPI.create(formData);
-      alert('Supplier added successfully!');
+      toast.success('Supplier added successfully!');
       router.push('/dashboard/suppliers');
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }

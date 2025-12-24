@@ -1,12 +1,15 @@
 'use client';
 // GST Reports Page
 import { useState, useEffect } from 'react';
+import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { HiDownload, HiDocumentReport } from 'react-icons/hi';
 import { reportsAPI, shopAPI } from '@/utils/api';
 import * as XLSX from 'xlsx';
 
 export default function ReportsPage() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('gstr1');
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -45,7 +48,7 @@ export default function ReportsPage() {
 
   const generateReport = async () => {
     if (!dateRange.startDate || !dateRange.endDate) {
-      alert('Please select both start and end dates');
+      toast.warning('Please select both start and end dates');
       return;
     }
 
@@ -85,7 +88,7 @@ export default function ReportsPage() {
       console.log('📦 B2C Small Count:', data.b2cSmall?.length);
     } catch (error) {
       console.error('Error generating report:', error);
-      alert(error.message || 'Failed to generate report');
+      toast.error(error.message || 'Failed to generate report');
     } finally {
       setLoading(false);
     }
@@ -93,12 +96,12 @@ export default function ReportsPage() {
 
   const handleExport = (format) => {
     if (!reportData) {
-      alert('Please generate a report first');
+      toast.warning('Please generate a report first');
       return;
     }
 
     if (format === 'pdf') {
-      alert(`⚠️ IMPORTANT - To remove the date/time header:\n\n1. In the print dialog that opens, click "More settings"\n2. Turn OFF the "Headers and footers" option\n3. Set margins to "Default" or "None"\n4. Click "Save" to download PDF\n\n❌ Without doing this, you will see browser headers like:\n"14/12/2025, 02:38 ${shopName} - Billing Software"\n\n✅ After turning off headers, you will get a clean PDF`);
+      toast.info('Tip: Turn OFF "Headers and footers" in print dialog for a clean PDF', 8000);
       window.print();
       return;
     }
@@ -738,8 +741,7 @@ export default function ReportsPage() {
 
                 {loading && (
                   <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-500">Generating report...</p>
+                    <LoadingSpinner size="lg" text="Generating report..." />
                   </div>
                 )}
 
@@ -893,8 +895,7 @@ export default function ReportsPage() {
 
                 {loading && (
                   <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-500">Generating report...</p>
+                    <LoadingSpinner size="lg" text="Generating report..." />
                   </div>
                 )}
 
@@ -1018,8 +1019,7 @@ export default function ReportsPage() {
 
                 {loading && (
                   <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-500">Generating report...</p>
+                    <LoadingSpinner size="lg" text="Generating report..." />
                   </div>
                 )}
 
@@ -1126,8 +1126,7 @@ export default function ReportsPage() {
 
                 {loading && (
                   <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-500">Generating report...</p>
+                    <LoadingSpinner size="lg" text="Generating report..." />
                   </div>
                 )}
 

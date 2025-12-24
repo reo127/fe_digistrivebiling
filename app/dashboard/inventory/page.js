@@ -49,7 +49,7 @@ export default function InventoryPage() {
       setAllBatches(batchesWithProducts);
     } catch (error) {
       console.error('Error loading inventory:', error);
-      alert(error.message);
+      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
