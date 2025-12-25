@@ -315,7 +315,7 @@ export default function Customers() {
                     <label className="block text-sm font-semibold text-gray-700">Name *</label>
                     <input
                       type="text"
-                      required
+                      
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
@@ -327,7 +327,7 @@ export default function Customers() {
                     <label className="block text-sm font-semibold text-gray-700">Phone *</label>
                     <input
                       type="tel"
-                      required
+                      
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"

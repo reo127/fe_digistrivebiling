@@ -128,13 +128,13 @@ export default function NewExpensePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
+                  Category 
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 >
                   {categories.map((cat) => (
@@ -147,27 +147,27 @@ export default function NewExpensePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date <span className="text-red-500">*</span>
+                  Date 
                 </label>
                 <input
                   type="date"
                   name="date"
                   value={formData.date}
                   onChange={handleChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description <span className="text-red-500">*</span>
+                  Description 
                 </label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  required
+                  
                   rows={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   placeholder="Enter expense description..."
@@ -210,14 +210,14 @@ export default function NewExpensePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount (₹) <span className="text-red-500">*</span>
+                  Amount (₹) 
                 </label>
                 <input
                   type="number"
                   name="amount"
                   value={formData.amount}
                   onChange={handleAmountChange}
-                  required
+                  
                   min="0"
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
@@ -273,13 +273,13 @@ export default function NewExpensePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Mode <span className="text-red-500">*</span>
+                  Payment Mode 
                 </label>
                 <select
                   name="paymentMethod"
                   value={formData.paymentMethod}
                   onChange={handleChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="CASH">Cash</option>

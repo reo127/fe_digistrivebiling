@@ -207,7 +207,6 @@ export default function NewPurchasePage() {
         ...formData.items,
         {
           product: '',
-          batchNo: '',
           expiryDate: '',
           quantity: 1,
           freeQuantity: 0,
@@ -267,28 +266,9 @@ export default function NewPurchasePage() {
     }
 
     // Validate all items
-    for (let i = 0; i < formData.items.length; i++) {
-      const item = formData.items[i];
-      if (!item.product) {
-        toast.warning(`Please select product for item ${i + 1}`);
-        return;
-      }
-      if (!item.batchNo) {
-        toast.warning(`Please enter batch number for item ${i + 1}`);
-        return;
-      }
-      if (!item.expiryDate) {
-        toast.warning(`Please enter expiry date for item ${i + 1}`);
-        return;
-      }
-      if (item.quantity <= 0) {
-        toast.warning(`Please enter valid quantity for item ${i + 1}`);
-        return;
-      }
-      if (item.purchasePrice <= 0) {
-        toast.warning(`Please enter valid purchase price for item ${i + 1}`);
-        return;
-      }
+    if (formData.items.length === 0) {
+      toast.warning('Please add at least one item');
+      return;
     }
 
     setLoading(true);
@@ -306,7 +286,14 @@ export default function NewPurchasePage() {
       toast.success('Purchase entry added successfully!');
       router.push('/dashboard/purchases');
     } catch (error) {
-      toast.error(error.message || 'An error occurred');
+      // Parse backend validation errors and show user-friendly messages
+      const errorMessage = error.message || 'An error occurred';
+
+      if (errorMessage.includes('validation failed')) {
+        toast.error('Please check all fields and try again');
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -335,13 +322,13 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier <span className="text-red-500">*</span>
+                  Supplier
+                  <span className="text-xs text-gray-500 ml-1">(Optional - Select if available)</span>
                 </label>
                 <div className="flex gap-2">
                   <select
                     value={formData.supplier}
                     onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                    required
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">Select Supplier</option>
@@ -364,39 +351,40 @@ export default function NewPurchasePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier Bill Number <span className="text-red-500">*</span>
+                  Supplier Bill Number
+                  <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                 </label>
                 <input
                   type="text"
                   value={formData.billNumber}
                   onChange={(e) => setFormData({ ...formData, billNumber: e.target.value })}
-                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Enter bill number"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bill Date <span className="text-red-500">*</span>
+                  Bill Date
+                  <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                 </label>
                 <input
                   type="date"
                   value={formData.billDate}
                   onChange={(e) => setFormData({ ...formData, billDate: e.target.value })}
-                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Purchase Date <span className="text-red-500">*</span>
+                  Purchase Date
+                  <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                 </label>
                 <input
                   type="date"
                   value={formData.purchaseDate}
                   onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                  required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -439,13 +427,13 @@ export default function NewPurchasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Product <span className="text-red-500">*</span>
+                          Product 
                         </label>
                         <div className="flex gap-2">
                           <select
                             value={item.product}
                             onChange={(e) => updateItem(index, 'product', e.target.value)}
-                            required
+                            
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                           >
                             <option value="">Select Product</option>
@@ -471,39 +459,28 @@ export default function NewPurchasePage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Batch No <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={item.batchNo}
-                          onChange={(e) => updateItem(index, 'batchNo', e.target.value)}
-                          required
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Expiry Date <span className="text-red-500">*</span>
+                          Expiry Date
+                          <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                         </label>
                         <input
                           type="date"
                           value={item.expiryDate}
                           onChange={(e) => updateItem(index, 'expiryDate', e.target.value)}
-                          required
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          placeholder="Select expiry date"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Quantity <span className="text-red-500">*</span>
+                          Quantity
+                          <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                         </label>
                         <input
                           type="number"
                           value={item.quantity}
                           onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                          required
+                          
                           min="1"
                           step="1"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
@@ -513,6 +490,7 @@ export default function NewPurchasePage() {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Free Qty
+                          <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                         </label>
                         <input
                           type="number"
@@ -521,57 +499,62 @@ export default function NewPurchasePage() {
                           min="0"
                           step="1"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          placeholder="0"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Purchase Price <span className="text-red-500">*</span>
+                          Purchase Price
+                          <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                         </label>
                         <input
                           type="number"
                           value={item.purchasePrice}
                           onChange={(e) => updateItem(index, 'purchasePrice', parseFloat(e.target.value) || 0)}
-                          required
                           min="0"
                           step="0.01"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          placeholder="0.00"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          MRP <span className="text-red-500">*</span>
+                          MRP
+                          <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                         </label>
                         <input
                           type="number"
                           value={item.mrp}
                           onChange={(e) => updateItem(index, 'mrp', parseFloat(e.target.value) || 0)}
-                          required
                           min="0"
                           step="0.01"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          placeholder="0.00"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Selling Price <span className="text-red-500">*</span>
+                          Selling Price
+                          <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                         </label>
                         <input
                           type="number"
                           value={item.sellingPrice}
                           onChange={(e) => updateItem(index, 'sellingPrice', parseFloat(e.target.value) || 0)}
-                          required
                           min="0"
                           step="0.01"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                          placeholder="0.00"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           GST Rate (%)
+                          <span className="text-xs text-gray-500 ml-1">(Optional)</span>
                         </label>
                         <select
                           value={item.gstRate}
@@ -809,14 +792,14 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier Name <span className="text-red-500">*</span>
+                  Supplier Name 
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={supplierFormData.name}
                   onChange={handleSupplierFormChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -836,14 +819,14 @@ export default function NewPurchasePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone <span className="text-red-500">*</span>
+                  Phone 
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={supplierFormData.phone}
                   onChange={handleSupplierFormChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -869,14 +852,14 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  GSTIN <span className="text-red-500">*</span>
+                  GSTIN 
                 </label>
                 <input
                   type="text"
                   name="gstin"
                   value={supplierFormData.gstin}
                   onChange={handleSupplierFormChange}
-                  required
+                  
                   maxLength={15}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
                 />
@@ -931,14 +914,14 @@ export default function NewPurchasePage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State <span className="text-red-500">*</span>
+                    State 
                   </label>
                   <input
                     type="text"
                     name="state"
                     value={supplierFormData.state}
                     onChange={handleSupplierFormChange}
-                    required
+                    
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -1063,14 +1046,14 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Name <span className="text-red-500">*</span>
+                  Product Name 
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={productFormData.name}
                   onChange={handleProductFormChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -1154,14 +1137,14 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  MRP (₹) <span className="text-red-500">*</span>
+                  MRP (₹) 
                 </label>
                 <input
                   type="number"
                   name="mrp"
                   value={productFormData.mrp}
                   onChange={handleProductFormChange}
-                  required
+                  
                   min="0"
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
@@ -1170,14 +1153,14 @@ export default function NewPurchasePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selling Price (₹) <span className="text-red-500">*</span>
+                  Selling Price (₹) 
                 </label>
                 <input
                   type="number"
                   name="sellingPrice"
                   value={productFormData.sellingPrice}
                   onChange={handleProductFormChange}
-                  required
+                  
                   min="0"
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"

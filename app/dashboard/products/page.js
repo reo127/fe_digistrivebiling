@@ -31,7 +31,6 @@ export default function Products() {
     genericName: '',
     manufacturer: '',
     composition: '',
-    batchNo: '',
     expiryDate: '',
     hsnCode: '',
     gstRate: 12,
@@ -86,7 +85,6 @@ export default function Products() {
       genericName: product.genericName || '',
       manufacturer: product.manufacturer || '',
       composition: product.composition || '',
-      batchNo: product.batchNo || '',
       expiryDate: product.expiryDate ? product.expiryDate.split('T')[0] : '',
       hsnCode: product.hsnCode || '',
       gstRate: product.gstRate,
@@ -118,7 +116,6 @@ export default function Products() {
       genericName: '',
       manufacturer: '',
       composition: '',
-      batchNo: '',
       expiryDate: '',
       hsnCode: '',
       gstRate: 12,
@@ -338,10 +335,9 @@ export default function Products() {
               <form onSubmit={handleSubmit} className="space-y-6 text-black">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Product Name *</label>
+                    <label className="block text-sm font-semibold text-gray-700">Product Name</label>
                     <input
                       type="text"
-                      required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -383,17 +379,6 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Batch No</label>
-                    <input
-                      type="text"
-                      value={formData.batchNo}
-                      onChange={(e) => setFormData({ ...formData, batchNo: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Enter batch number"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700">Expiry Date</label>
                     <input
                       type="date"
@@ -404,9 +389,10 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">HSN Code</label>
+                    <label className="block text-sm font-semibold text-gray-700">HSN Code *</label>
                     <input
                       type="text"
+                      required
                       value={formData.hsnCode}
                       onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -415,9 +401,8 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">GST Rate (%) *</label>
+                    <label className="block text-sm font-semibold text-gray-700">GST Rate (%)</label>
                     <select
-                      required
                       value={formData.gstRate}
                       onChange={(e) => setFormData({ ...formData, gstRate: Number(e.target.value) })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -431,10 +416,9 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">MRP *</label>
+                    <label className="block text-sm font-semibold text-gray-700">MRP</label>
                     <input
                       type="number"
-                      required
                       step="0.01"
                       value={formData.mrp}
                       onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
@@ -444,10 +428,9 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Selling Price *</label>
+                    <label className="block text-sm font-semibold text-gray-700">Selling Price</label>
                     <input
                       type="number"
-                      required
                       step="0.01"
                       value={formData.sellingPrice}
                       onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
@@ -469,10 +452,9 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Stock Quantity *</label>
+                    <label className="block text-sm font-semibold text-gray-700">Stock Quantity</label>
                     <input
                       type="number"
-                      required
                       value={formData.stockQuantity}
                       onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -492,9 +474,8 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Unit *</label>
+                    <label className="block text-sm font-semibold text-gray-700">Unit</label>
                     <select
-                      required
                       value={formData.unit}
                       onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"

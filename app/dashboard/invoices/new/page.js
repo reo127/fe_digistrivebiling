@@ -362,7 +362,7 @@ export default function NewInvoice() {
                 </label>
                 <input
                   type="text"
-                  required
+                  
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -387,7 +387,7 @@ export default function NewInvoice() {
                 </label>
                 <input
                   type="date"
-                  required
+                  
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
@@ -400,7 +400,7 @@ export default function NewInvoice() {
                   Tax Type *
                 </label>
                 <select
-                  required
+                  
                   value={taxType}
                   onChange={(e) => setTaxType(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -418,7 +418,7 @@ export default function NewInvoice() {
                   </label>
                   <input
                     type="number"
-                    required
+                    
                     min="0"
                     step="0.01"
                     value={cessRate}
@@ -462,7 +462,7 @@ export default function NewInvoice() {
                 <div key={index} className="flex gap-4 items-start p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <select
-                      required
+                      
                       value={item.product}
                       onChange={(e) => updateItem(index, 'product', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -479,7 +479,7 @@ export default function NewInvoice() {
                   <div className="w-20">
                     <input
                       type="number"
-                      required
+                      
                       min="1"
                       placeholder="Qty"
                       value={item.quantity}
@@ -491,7 +491,7 @@ export default function NewInvoice() {
                   <div className="w-28">
                     <input
                       type="number"
-                      required
+                      
                       step="0.01"
                       placeholder="Price"
                       value={item.sellingPrice}
@@ -502,7 +502,7 @@ export default function NewInvoice() {
 
                   <div className="w-24">
                     <select
-                      required
+                      
                       value={item.gstRate}
                       onChange={(e) => updateItem(index, 'gstRate', Number(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -608,7 +608,7 @@ export default function NewInvoice() {
                   Payment Status *
                 </label>
                 <select
-                  required
+                  
                   value={paymentStatus}
                   onChange={(e) => {
                     setPaymentStatus(e.target.value);
@@ -629,7 +629,7 @@ export default function NewInvoice() {
                   Payment Method *
                 </label>
                 <select
-                  required
+                  
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -721,28 +721,28 @@ export default function NewInvoice() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Customer Name <span className="text-red-500">*</span>
+                Customer Name 
               </label>
               <input
                 type="text"
                 name="name"
                 value={customerFormData.name}
                 onChange={handleCustomerFormChange}
-                required
+                
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone <span className="text-red-500">*</span>
+                Phone 
               </label>
               <input
                 type="tel"
                 name="phone"
                 value={customerFormData.phone}
                 onChange={handleCustomerFormChange}
-                required
+                
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
               />
             </div>

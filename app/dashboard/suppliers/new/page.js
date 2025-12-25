@@ -89,14 +89,14 @@ export default function NewSupplierPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier Name <span className="text-red-500">*</span>
+                  Supplier Name 
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -116,14 +116,14 @@ export default function NewSupplierPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone <span className="text-red-500">*</span>
+                  Phone 
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  required
+                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -149,14 +149,14 @@ export default function NewSupplierPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  GSTIN <span className="text-red-500">*</span>
+                  GSTIN 
                 </label>
                 <input
                   type="text"
                   name="gstin"
                   value={formData.gstin}
                   onChange={handleChange}
-                  required
+                  
                   maxLength={15}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
                 />
@@ -211,14 +211,14 @@ export default function NewSupplierPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State <span className="text-red-500">*</span>
+                    State 
                   </label>
                   <input
                     type="text"
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
-                    required
+                    
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
