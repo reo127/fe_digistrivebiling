@@ -5,13 +5,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { suppliersAPI } from '@/utils/api';
-import { HiArrowLeft } from 'react-icons/hi';
+import { HiArrowLeft, HiExclamation } from 'react-icons/hi';
 import Link from 'next/link';
 
 export default function NewSupplierPage() {
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     contactPerson: '',
@@ -52,8 +53,32 @@ export default function NewSupplierPage() {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Name is mandatory
+    if (!formData.name || formData.name.trim() === '') {
+      newErrors.name = 'Supplier Name is required';
+    }
+
+    // Phone is mandatory
+    if (!formData.phone || formData.phone.trim() === '') {
+      newErrors.phone = 'Phone Number is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form first
+    if (!validateForm()) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -89,16 +114,30 @@ export default function NewSupplierPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier Name 
+                  Supplier Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={handleChange}
-                  
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.name) {
+                      setErrors({ ...errors, name: '' });
+                    }
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                    errors.name
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500'
+                  }`}
                 />
+                {errors.name && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -116,16 +155,30 @@ export default function NewSupplierPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone 
+                  Phone <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
-                  onChange={handleChange}
-                  
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.phone) {
+                      setErrors({ ...errors, phone: '' });
+                    }
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                    errors.phone
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500'
+                  }`}
                 />
+                {errors.phone && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.phone}
+                  </p>
+                )}
               </div>
 
               <div>

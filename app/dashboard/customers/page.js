@@ -16,7 +16,8 @@ import {
   HiUsers,
   HiMail,
   HiPhone,
-  HiLocationMarker
+  HiLocationMarker,
+  HiExclamation
 } from 'react-icons/hi';
 
 export default function Customers() {
@@ -28,6 +29,7 @@ export default function Customers() {
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -58,13 +60,39 @@ export default function Customers() {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Name is mandatory
+    if (!formData.name || formData.name.trim() === '') {
+      newErrors.name = 'Customer Name is required';
+    }
+
+    // Phone is mandatory
+    if (!formData.phone || formData.phone.trim() === '') {
+      newErrors.phone = 'Phone Number is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form first
+    if (!validateForm()) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
     try {
       if (editingCustomer) {
         await customersAPI.update(editingCustomer._id, formData);
+        toast.success('Customer updated successfully!');
       } else {
         await customersAPI.create(formData);
+        toast.success('Customer added successfully!');
       }
       setShowModal(false);
       resetForm();
@@ -112,6 +140,7 @@ export default function Customers() {
       pincode: '',
     });
     setEditingCustomer(null);
+    setErrors({});
   };
 
   if (loading || !user) return null;
@@ -312,27 +341,59 @@ export default function Customers() {
               <form onSubmit={handleSubmit} className="space-y-6 text-black">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Name *</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
-                      
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value });
+                        if (errors.name) {
+                          setErrors({ ...errors, name: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                        errors.name
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-purple-500 focus:border-transparent'
+                      }`}
                       placeholder="Enter customer name"
                     />
+                    {errors.name && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.name}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Phone *</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="tel"
-                      
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, phone: e.target.value });
+                        if (errors.phone) {
+                          setErrors({ ...errors, phone: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                        errors.phone
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-purple-500 focus:border-transparent'
+                      }`}
                       placeholder="Enter phone number"
                     />
+                    {errors.phone && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.phone}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

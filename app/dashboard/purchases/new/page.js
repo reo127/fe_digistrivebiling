@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import Modal from '@/components/Modal';
 import { purchasesAPI, suppliersAPI, productsAPI } from '@/utils/api';
-import { HiArrowLeft, HiPlus, HiTrash } from 'react-icons/hi';
+import { HiArrowLeft, HiPlus, HiTrash, HiExclamation } from 'react-icons/hi';
 import Link from 'next/link';
 
 export default function NewPurchasePage() {
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({
@@ -218,6 +219,10 @@ export default function NewPurchasePage() {
         }
       ]
     });
+    // Clear items error when adding an item
+    if (errors.items) {
+      setErrors({ ...errors, items: '' });
+    }
   };
 
   const removeItem = (index) => {
@@ -252,22 +257,29 @@ export default function NewPurchasePage() {
     return { subtotal, totalGST, grandTotal };
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Supplier is mandatory
+    if (!formData.supplier || formData.supplier === '') {
+      newErrors.supplier = 'Please select a supplier';
+    }
+
+    // At least one item is mandatory
+    if (formData.items.length === 0) {
+      newErrors.items = 'Please add at least one item to the purchase';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (formData.items.length === 0) {
-      toast.warning('Please add at least one item');
-      return;
-    }
-
-    if (!formData.supplier) {
-      toast.warning('Please select a supplier');
-      return;
-    }
-
-    // Validate all items
-    if (formData.items.length === 0) {
-      toast.warning('Please add at least one item');
+    // Validate form first
+    if (!validateForm()) {
+      toast.error('Please fill all required fields');
       return;
     }
 
@@ -322,22 +334,38 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier
-                  <span className="text-xs text-gray-500 ml-1">(Optional - Select if available)</span>
+                  Supplier <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2">
-                  <select
-                    value={formData.supplier}
-                    onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">Select Supplier</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier._id} value={supplier._id}>
-                        {supplier.name} - {supplier.gstin}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex-1">
+                    <select
+                      value={formData.supplier}
+                      onChange={(e) => {
+                        setFormData({ ...formData, supplier: e.target.value });
+                        if (errors.supplier) {
+                          setErrors({ ...errors, supplier: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                        errors.supplier
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-emerald-500'
+                      }`}
+                    >
+                      <option value="">Select Supplier</option>
+                      {suppliers.map((supplier) => (
+                        <option key={supplier._id} value={supplier._id}>
+                          {supplier.name} - {supplier.gstin}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.supplier && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.supplier}
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => setShowSupplierModal(true)}
@@ -394,7 +422,17 @@ export default function NewPurchasePage() {
           {/* Items Section */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Items</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Items <span className="text-red-500">*</span>
+                </h2>
+                {errors.items && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.items}
+                  </p>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={addItem}
@@ -406,7 +444,7 @@ export default function NewPurchasePage() {
             </div>
 
             {formData.items.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className={`text-center py-8 ${errors.items ? 'text-red-500 bg-red-50 border border-red-200 rounded-lg' : 'text-gray-500'}`}>
                 No items added. Click "Add Item" to start.
               </div>
             ) : (

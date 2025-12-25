@@ -5,13 +5,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { expensesAPI } from '@/utils/api';
-import { HiArrowLeft } from 'react-icons/hi';
+import { HiArrowLeft, HiExclamation } from 'react-icons/hi';
 import Link from 'next/link';
 
 export default function NewExpensePage() {
   const router = useRouter();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     category: 'MISCELLANEOUS',
     description: '',
@@ -78,16 +79,24 @@ export default function NewExpensePage() {
     });
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Amount is mandatory and must be greater than 0
+    if (!formData.amount || formData.amount <= 0) {
+      newErrors.amount = 'Amount is required and must be greater than 0';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.description) {
-      toast.warning('Please enter expense description');
-      return;
-    }
-
-    if (formData.amount <= 0) {
-      toast.warning('Please enter valid amount');
+    // Validate form first
+    if (!validateForm()) {
+      toast.error('Please fill all required fields');
       return;
     }
 
@@ -98,7 +107,14 @@ export default function NewExpensePage() {
       toast.success('Expense added successfully!');
       router.push('/dashboard/expenses');
     } catch (error) {
-      toast.error(error.message || 'An error occurred');
+      // Parse backend validation errors
+      const errorMessage = error.message || 'An error occurred';
+
+      if (errorMessage.includes('validation failed')) {
+        toast.error('Please check all fields and try again');
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -128,13 +144,12 @@ export default function NewExpensePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category 
+                  Category
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 >
                   {categories.map((cat) => (
@@ -161,13 +176,12 @@ export default function NewExpensePage() {
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description 
+                  Description
                 </label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  
                   rows={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   placeholder="Enter expense description..."
@@ -210,18 +224,32 @@ export default function NewExpensePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount (₹) 
+                  Amount (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   name="amount"
                   value={formData.amount}
-                  onChange={handleAmountChange}
-                  
+                  onChange={(e) => {
+                    handleAmountChange(e);
+                    if (errors.amount) {
+                      setErrors({ ...errors, amount: '' });
+                    }
+                  }}
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                    errors.amount
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500'
+                  }`}
                 />
+                {errors.amount && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.amount}
+                  </p>
+                )}
               </div>
 
               <div>

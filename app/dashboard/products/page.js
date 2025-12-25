@@ -26,6 +26,7 @@ export default function Products() {
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     genericName: '',
@@ -62,13 +63,54 @@ export default function Products() {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Product Name is mandatory
+    if (!formData.name || formData.name.trim() === '') {
+      newErrors.name = 'Product Name is required';
+    }
+
+    // MRP is mandatory
+    if (!formData.mrp || formData.mrp === '' || parseFloat(formData.mrp) <= 0) {
+      newErrors.mrp = 'MRP is required and must be greater than 0';
+    }
+
+    // Selling Price is mandatory
+    if (!formData.sellingPrice || formData.sellingPrice === '' || parseFloat(formData.sellingPrice) <= 0) {
+      newErrors.sellingPrice = 'Selling Price is required and must be greater than 0';
+    }
+
+    // Purchase Price is mandatory
+    if (!formData.purchasePrice || formData.purchasePrice === '' || parseFloat(formData.purchasePrice) <= 0) {
+      newErrors.purchasePrice = 'Purchase Price is required and must be greater than 0';
+    }
+
+    // Stock Quantity is mandatory
+    if (formData.stockQuantity === '' || parseFloat(formData.stockQuantity) < 0) {
+      newErrors.stockQuantity = 'Stock Quantity is required and cannot be negative';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form first
+    if (!validateForm()) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
     try {
       if (editingProduct) {
         await productsAPI.update(editingProduct._id, formData);
+        toast.success('Product updated successfully!');
       } else {
         await productsAPI.create(formData);
+        toast.success('Product added successfully!');
       }
       setShowModal(false);
       resetForm();
@@ -128,6 +170,7 @@ export default function Products() {
       rack: '',
     });
     setEditingProduct(null);
+    setErrors({});
   };
 
   if (loading || !user) return null;
@@ -335,14 +378,31 @@ export default function Products() {
               <form onSubmit={handleSubmit} className="space-y-6 text-black">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Product Name</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Product Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value });
+                        if (errors.name) {
+                          setErrors({ ...errors, name: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                        errors.name
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                      }`}
                       placeholder="Enter product name"
                     />
+                    {errors.name && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.name}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -389,10 +449,9 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">HSN Code *</label>
+                    <label className="block text-sm font-semibold text-gray-700">HSN Code</label>
                     <input
                       type="text"
-                      required
                       value={formData.hsnCode}
                       onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -416,50 +475,118 @@ export default function Products() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">MRP</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      MRP <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.mrp}
-                      onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, mrp: e.target.value });
+                        if (errors.mrp) {
+                          setErrors({ ...errors, mrp: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                        errors.mrp
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                      }`}
                       placeholder="0.00"
                     />
+                    {errors.mrp && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.mrp}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Selling Price</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Selling Price <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.sellingPrice}
-                      onChange={(e) => setFormData({ ...formData, sellingPrice: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, sellingPrice: e.target.value });
+                        if (errors.sellingPrice) {
+                          setErrors({ ...errors, sellingPrice: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                        errors.sellingPrice
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                      }`}
                       placeholder="0.00"
                     />
+                    {errors.sellingPrice && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.sellingPrice}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Purchase Price</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Purchase Price <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.purchasePrice}
-                      onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, purchasePrice: e.target.value });
+                        if (errors.purchasePrice) {
+                          setErrors({ ...errors, purchasePrice: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                        errors.purchasePrice
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                      }`}
                       placeholder="0.00"
                     />
+                    {errors.purchasePrice && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.purchasePrice}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Stock Quantity</label>
+                    <label className="block text-sm font-semibold text-gray-700">
+                      Stock Quantity <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="number"
                       value={formData.stockQuantity}
-                      onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onChange={(e) => {
+                        setFormData({ ...formData, stockQuantity: e.target.value });
+                        if (errors.stockQuantity) {
+                          setErrors({ ...errors, stockQuantity: '' });
+                        }
+                      }}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                        errors.stockQuantity
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                      }`}
                       placeholder="0"
                     />
+                    {errors.stockQuantity && (
+                      <p className="text-sm text-red-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        {errors.stockQuantity}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

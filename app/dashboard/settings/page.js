@@ -17,7 +17,8 @@ import {
   HiPhone,
   HiMail,
   HiLocationMarker,
-  HiDocument
+  HiDocument,
+  HiExclamation
 } from 'react-icons/hi';
 
 export default function Settings() {
@@ -38,6 +39,7 @@ export default function Settings() {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -69,8 +71,62 @@ export default function Settings() {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Shop Name is mandatory
+    if (!formData.shopName || formData.shopName.trim() === '') {
+      newErrors.shopName = 'Shop Name is required';
+    }
+
+    // Owner Name is mandatory
+    if (!formData.ownerName || formData.ownerName.trim() === '') {
+      newErrors.ownerName = 'Owner Name is required';
+    }
+
+    // Phone is mandatory
+    if (!formData.phone || formData.phone.trim() === '') {
+      newErrors.phone = 'Phone Number is required';
+    }
+
+    // Email is mandatory
+    if (!formData.email || formData.email.trim() === '') {
+      newErrors.email = 'Email is required';
+    }
+
+    // Address is mandatory
+    if (!formData.address || formData.address.trim() === '') {
+      newErrors.address = 'Address is required';
+    }
+
+    // City is mandatory
+    if (!formData.city || formData.city.trim() === '') {
+      newErrors.city = 'City is required';
+    }
+
+    // State is mandatory
+    if (!formData.state || formData.state.trim() === '') {
+      newErrors.state = 'State is required';
+    }
+
+    // Pincode is mandatory
+    if (!formData.pincode || formData.pincode.trim() === '') {
+      newErrors.pincode = 'Pincode is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form first
+    if (!validateForm()) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
     setSaving(true);
     setMessage({ type: '', text: '' });
 
@@ -81,19 +137,26 @@ export default function Settings() {
         document.title = `${formData.shopName} - Billing Software`;
       }
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
+      toast.success('Settings saved successfully!');
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
+      toast.error(error.message || 'An error occurred');
     } finally {
       setSaving(false);
     }
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: '' });
+    }
   };
 
   if (loading || !user) {
@@ -147,20 +210,33 @@ export default function Settings() {
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="sm:col-span-2 space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Shop Name *</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Shop Name <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="shopName"
-                  required
                   value={formData.shopName}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                    errors.shopName
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                  }`}
                   placeholder="ABC Medical Store"
                 />
+                {errors.shopName && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.shopName}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Owner Name</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Owner Name <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <HiUser className="h-5 w-5 text-gray-400" />
@@ -170,14 +246,26 @@ export default function Settings() {
                     name="ownerName"
                     value={formData.ownerName}
                     onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                      errors.ownerName
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                        : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                    }`}
                     placeholder="John Doe"
                   />
                 </div>
+                {errors.ownerName && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.ownerName}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Phone *</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Phone <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <HiPhone className="h-5 w-5 text-gray-400" />
@@ -185,17 +273,33 @@ export default function Settings() {
                   <input
                     type="tel"
                     name="phone"
-                    required
                     value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (errors.phone) {
+                        setErrors({ ...errors, phone: '' });
+                      }
+                    }}
+                    className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                      errors.phone
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                        : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                    }`}
                     placeholder="9876543210"
                   />
                 </div>
+                {errors.phone && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.phone}
+                  </p>
+                )}
               </div>
 
               <div className="sm:col-span-2 space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Email</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Email <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <HiMail className="h-5 w-5 text-gray-400" />
@@ -204,11 +308,26 @@ export default function Settings() {
                     type="email"
                     name="email"
                     value={formData.email}
-                    onChange={handleChange}
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (errors.email) {
+                        setErrors({ ...errors, email: '' });
+                      }
+                    }}
+                    className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                      errors.email
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                        : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                    }`}
                     placeholder="shop@example.com"
                   />
                 </div>
+                {errors.email && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.email}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -222,56 +341,120 @@ export default function Settings() {
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="sm:col-span-2 space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Address *</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Address <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="address"
-                  required
                   value={formData.address}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.address) {
+                      setErrors({ ...errors, address: '' });
+                    }
+                  }}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                    errors.address
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                  }`}
                   placeholder="123, Main Street"
                 />
+                {errors.address && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.address}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">City *</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  City <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="city"
-                  required
                   value={formData.city}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.city) {
+                      setErrors({ ...errors, city: '' });
+                    }
+                  }}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                    errors.city
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                  }`}
                   placeholder="Mumbai"
                 />
+                {errors.city && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.city}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">State *</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  State <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="state"
-                  required
                   value={formData.state}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.state) {
+                      setErrors({ ...errors, state: '' });
+                    }
+                  }}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                    errors.state
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                  }`}
                   placeholder="Maharashtra"
                 />
+                {errors.state && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.state}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Pincode *</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Pincode <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="pincode"
-                  required
                   value={formData.pincode}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.pincode) {
+                      setErrors({ ...errors, pincode: '' });
+                    }
+                  }}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                    errors.pincode
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-orange-500 focus:border-transparent'
+                  }`}
                   placeholder="400001"
                   maxLength={6}
                 />
+                {errors.pincode && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {errors.pincode}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -285,11 +468,10 @@ export default function Settings() {
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">GSTIN *</label>
+                <label className="block text-sm font-semibold text-gray-700">GSTIN</label>
                 <input
                   type="text"
                   name="gstin"
-                  required
                   value={formData.gstin}
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all uppercase"
