@@ -29,9 +29,6 @@ export default function Products() {
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
-    genericName: '',
-    manufacturer: '',
-    composition: '',
     expiryDate: '',
     hsnCode: '',
     gstRate: 12,
@@ -39,9 +36,9 @@ export default function Products() {
     sellingPrice: '',
     purchasePrice: '',
     stockQuantity: '',
-    minStockLevel: 10,
     unit: 'PCS',
-    rack: '',
+    batchNo: '',          // For initial batch
+    batchExpiryDate: '',  // For initial batch expiry
   });
 
   useEffect(() => {
@@ -91,6 +88,8 @@ export default function Products() {
       newErrors.stockQuantity = 'Stock Quantity is required and cannot be negative';
     }
 
+    // Batch fields are now optional - auto-generated if not provided
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -106,10 +105,20 @@ export default function Products() {
 
     try {
       if (editingProduct) {
-        await productsAPI.update(editingProduct._id, formData);
+        // When editing, don't send batch fields
+        const { batchNo, batchExpiryDate, ...updateData } = formData;
+        await productsAPI.update(editingProduct._id, updateData);
         toast.success('Product updated successfully!');
       } else {
-        await productsAPI.create(formData);
+        // When creating new product, send batch fields as batchNo and expiryDate
+        const submitData = {
+          ...formData,
+          expiryDate: formData.batchExpiryDate // Backend expects 'expiryDate' for batch
+        };
+        // Remove batchExpiryDate since we renamed it to expiryDate
+        delete submitData.batchExpiryDate;
+
+        await productsAPI.create(submitData);
         toast.success('Product added successfully!');
       }
       setShowModal(false);
@@ -124,9 +133,6 @@ export default function Products() {
     setEditingProduct(product);
     setFormData({
       name: product.name,
-      genericName: product.genericName || '',
-      manufacturer: product.manufacturer || '',
-      composition: product.composition || '',
       expiryDate: product.expiryDate ? product.expiryDate.split('T')[0] : '',
       hsnCode: product.hsnCode || '',
       gstRate: product.gstRate,
@@ -134,9 +140,7 @@ export default function Products() {
       sellingPrice: product.sellingPrice,
       purchasePrice: product.purchasePrice || '',
       stockQuantity: product.stockQuantity,
-      minStockLevel: product.minStockLevel,
       unit: product.unit,
-      rack: product.rack || '',
     });
     setShowModal(true);
   };
@@ -155,9 +159,6 @@ export default function Products() {
   const resetForm = () => {
     setFormData({
       name: '',
-      genericName: '',
-      manufacturer: '',
-      composition: '',
       expiryDate: '',
       hsnCode: '',
       gstRate: 12,
@@ -165,17 +166,15 @@ export default function Products() {
       sellingPrice: '',
       purchasePrice: '',
       stockQuantity: '',
-      minStockLevel: 10,
       unit: 'PCS',
-      rack: '',
+      batchNo: '',
+      batchExpiryDate: '',
     });
     setEditingProduct(null);
     setErrors({});
   };
 
   if (loading || !user) return null;
-
-  const lowStockProducts = products.filter(p => p.stockQuantity <= p.minStockLevel).length;
 
   return (
     <DashboardLayout>
@@ -205,21 +204,6 @@ export default function Products() {
           </button>
         </div>
 
-        {/* Low Stock Alert */}
-        {lowStockProducts > 0 && (
-          <div className="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-orange-500 rounded-xl p-4 flex items-start space-x-3">
-            <div className="flex-shrink-0">
-              <HiExclamation className="w-6 h-6 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-orange-900">Low Stock Alert</h3>
-              <p className="text-sm text-orange-700 mt-1">
-                {lowStockProducts} product{lowStockProducts > 1 ? 's are' : ' is'} running low on stock
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Main Content */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
           {/* Search */}
@@ -228,7 +212,7 @@ export default function Products() {
               <HiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search products by name, generic name, or manufacturer..."
+                placeholder="Search products by name or HSN code..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyUp={() => loadProducts()}
@@ -289,12 +273,6 @@ export default function Products() {
                       <td className="px-6 py-4">
                         <div>
                           <div className="text-sm font-semibold text-gray-900">{product.name}</div>
-                          {product.genericName && (
-                            <div className="text-xs text-gray-500 mt-0.5">{product.genericName}</div>
-                          )}
-                          {product.manufacturer && (
-                            <div className="text-xs text-gray-400 mt-0.5">{product.manufacturer}</div>
-                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
@@ -310,7 +288,7 @@ export default function Products() {
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                            product.stockQuantity <= product.minStockLevel
+                            product.stockQuantity === 0
                               ? 'bg-red-100 text-red-700'
                               : 'bg-green-100 text-green-700'
                           }`}
@@ -403,39 +381,6 @@ export default function Products() {
                         {errors.name}
                       </p>
                     )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Generic Name</label>
-                    <input
-                      type="text"
-                      value={formData.genericName}
-                      onChange={(e) => setFormData({ ...formData, genericName: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Enter generic name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Manufacturer</label>
-                    <input
-                      type="text"
-                      value={formData.manufacturer}
-                      onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Enter manufacturer"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Composition</label>
-                    <input
-                      type="text"
-                      value={formData.composition}
-                      onChange={(e) => setFormData({ ...formData, composition: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Enter composition"
-                    />
                   </div>
 
                   <div className="space-y-2">
@@ -589,16 +534,50 @@ export default function Products() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Min Stock Level</label>
-                    <input
-                      type="number"
-                      value={formData.minStockLevel}
-                      onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="10"
-                    />
-                  </div>
+                  {/* Batch fields - only show when adding initial stock (new product only) */}
+                  {!editingProduct && formData.stockQuantity && parseFloat(formData.stockQuantity) > 0 && (
+                    <>
+                      <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            <HiExclamation className="w-5 h-5 text-blue-600 mt-0.5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-blue-900">Batch Details (Optional)</h4>
+                            <p className="text-xs text-blue-700 mt-1">
+                              Batch number will be auto-generated if not provided. Expiry date defaults to 1 year from today if left empty.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">
+                          Batch Number <span className="text-xs text-gray-500">(Optional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.batchNo}
+                          onChange={(e) => setFormData({ ...formData, batchNo: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder="Auto-generated if left empty"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-gray-700">
+                          Batch Expiry Date <span className="text-xs text-gray-500">(Optional)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.batchExpiryDate}
+                          onChange={(e) => setFormData({ ...formData, batchExpiryDate: e.target.value })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder="Defaults to 1 year from today"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700">Unit</label>
@@ -614,17 +593,6 @@ export default function Products() {
                       <option value="KG">KG</option>
                       <option value="LITRE">LITRE</option>
                     </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">Rack/Location</label>
-                    <input
-                      type="text"
-                      value={formData.rack}
-                      onChange={(e) => setFormData({ ...formData, rack: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                      placeholder="Enter rack/location"
-                    />
                   </div>
                 </div>
 

@@ -65,19 +65,14 @@ export default function NewPurchasePage() {
   const [currentItemIndex, setCurrentItemIndex] = useState(null);
   const [productFormData, setProductFormData] = useState({
     name: '',
-    genericName: '',
-    manufacturer: '',
-    composition: '',
     hsnCode: '',
     gstRate: 12,
     mrp: 0,
     sellingPrice: 0,
     purchasePrice: 0,
-    stockQuantity: 0,
-    minStockLevel: 10,
-    unit: 'PCS',
-    rack: ''
+    unit: 'PCS'
   });
+  const [productFormErrors, setProductFormErrors] = useState({});
 
   useEffect(() => {
     loadData();
@@ -160,39 +155,85 @@ export default function NewPurchasePage() {
   const handleProductFormChange = (e) => {
     const { name, value } = e.target;
     setProductFormData({ ...productFormData, [name]: value });
+    // Clear error for this field
+    if (productFormErrors[name]) {
+      setProductFormErrors({ ...productFormErrors, [name]: '' });
+    }
+  };
+
+  const validateProductForm = () => {
+    const newErrors = {};
+
+    // Product Name is mandatory
+    if (!productFormData.name || productFormData.name.trim() === '') {
+      newErrors.name = 'Product Name is required';
+    }
+
+    // MRP is mandatory
+    if (!productFormData.mrp || parseFloat(productFormData.mrp) <= 0) {
+      newErrors.mrp = 'MRP is required and must be greater than 0';
+    }
+
+    // Selling Price is mandatory
+    if (!productFormData.sellingPrice || parseFloat(productFormData.sellingPrice) <= 0) {
+      newErrors.sellingPrice = 'Selling Price is required and must be greater than 0';
+    }
+
+    // Purchase Price is mandatory
+    if (!productFormData.purchasePrice || parseFloat(productFormData.purchasePrice) <= 0) {
+      newErrors.purchasePrice = 'Purchase Price is required and must be greater than 0';
+    }
+
+    setProductFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleCreateProduct = async (e) => {
     e.preventDefault();
+
+    if (!validateProductForm()) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
     setSavingProduct(true);
 
     try {
-      const newProduct = await productsAPI.create(productFormData);
+      // Always create product with 0 stock - stock will be added through purchase
+      const newProduct = await productsAPI.create({
+        ...productFormData,
+        stockQuantity: 0
+      });
       // Reload products list
       const productsData = await productsAPI.getAll();
       setProducts(productsData);
-      // Auto-select the newly created product in the current item
+      // Auto-select the newly created product in the current item and autofill fields
       if (currentItemIndex !== null) {
-        updateItem(currentItemIndex, 'product', newProduct._id);
+        // Use handleProductSelect to autofill all fields from the new product
+        const newItems = [...formData.items];
+        newItems[currentItemIndex] = {
+          ...newItems[currentItemIndex],
+          product: newProduct._id,
+          purchasePrice: newProduct.purchasePrice || 0,
+          mrp: newProduct.mrp || 0,
+          sellingPrice: newProduct.sellingPrice || 0,
+          gstRate: newProduct.gstRate || 12
+        };
+        setFormData({ ...formData, items: newItems });
       }
       // Close modal and reset form
       setShowProductModal(false);
       setCurrentItemIndex(null);
       setProductFormData({
         name: '',
-        genericName: '',
-        manufacturer: '',
-        composition: '',
         hsnCode: '',
         gstRate: 12,
         mrp: 0,
         sellingPrice: 0,
         purchasePrice: 0,
-        stockQuantity: 0,
-        minStockLevel: 10,
-        unit: 'PCS',
-        rack: ''
+        unit: 'PCS'
       });
+      setProductFormErrors({});
       toast.success('Product added successfully!');
     } catch (error) {
       toast.error(error.message || 'An error occurred');
@@ -234,6 +275,31 @@ export default function NewPurchasePage() {
     const newItems = [...formData.items];
     newItems[index] = { ...newItems[index], [field]: value };
     setFormData({ ...formData, items: newItems });
+  };
+
+  const handleProductSelect = (index, productId) => {
+    if (!productId) {
+      // If product is deselected, just update the product field
+      updateItem(index, 'product', '');
+      return;
+    }
+
+    // Find the selected product
+    const selectedProduct = products.find(p => p._id === productId);
+
+    if (selectedProduct) {
+      // Update item with product ID and autofill all available fields
+      const newItems = [...formData.items];
+      newItems[index] = {
+        ...newItems[index],
+        product: productId,
+        purchasePrice: selectedProduct.purchasePrice || 0,
+        mrp: selectedProduct.mrp || 0,
+        sellingPrice: selectedProduct.sellingPrice || 0,
+        gstRate: selectedProduct.gstRate || 12
+      };
+      setFormData({ ...formData, items: newItems });
+    }
   };
 
   const calculateItemTotal = (item) => {
@@ -470,14 +536,14 @@ export default function NewPurchasePage() {
                         <div className="flex gap-2">
                           <select
                             value={item.product}
-                            onChange={(e) => updateItem(index, 'product', e.target.value)}
-                            
+                            onChange={(e) => handleProductSelect(index, e.target.value)}
+
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                           >
                             <option value="">Select Product</option>
                             {products.map((product) => (
                               <option key={product._id} value={product._id}>
-                                {product.name} - {product.genericName}
+                                {product.name}
                               </option>
                             ))}
                           </select>
@@ -1082,61 +1148,32 @@ export default function NewPurchasePage() {
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Name 
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Product Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={productFormData.name}
                   onChange={handleProductFormChange}
-                  
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
+                    productFormErrors.name
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                  }`}
+                  placeholder="Enter product name"
                 />
+                {productFormErrors.name && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {productFormErrors.name}
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Generic Name
-                </label>
-                <input
-                  type="text"
-                  name="genericName"
-                  value={productFormData.genericName}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Manufacturer
-                </label>
-                <input
-                  type="text"
-                  name="manufacturer"
-                  value={productFormData.manufacturer}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Composition
-                </label>
-                <input
-                  type="text"
-                  name="composition"
-                  value={productFormData.composition}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
                   HSN Code
                 </label>
                 <input
@@ -1144,19 +1181,20 @@ export default function NewPurchasePage() {
                   name="hsnCode"
                   value={productFormData.hsnCode}
                   onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  placeholder="Enter HSN code"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Unit
                 </label>
                 <select
                   name="unit"
                   value={productFormData.unit}
                   onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 >
                   <option value="PCS">Pieces</option>
                   <option value="BOX">Box</option>
@@ -1172,42 +1210,62 @@ export default function NewPurchasePage() {
           {/* Pricing Information */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  MRP (₹) 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  MRP (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   name="mrp"
                   value={productFormData.mrp}
                   onChange={handleProductFormChange}
-                  
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
+                    productFormErrors.mrp
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                  }`}
+                  placeholder="Enter MRP"
                 />
+                {productFormErrors.mrp && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {productFormErrors.mrp}
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selling Price (₹) 
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Selling Price (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   name="sellingPrice"
                   value={productFormData.sellingPrice}
                   onChange={handleProductFormChange}
-                  
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
+                    productFormErrors.sellingPrice
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                  }`}
+                  placeholder="Enter selling price"
                 />
+                {productFormErrors.sellingPrice && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {productFormErrors.sellingPrice}
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Purchase Price (₹)
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Purchase Price (₹) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -1216,19 +1274,30 @@ export default function NewPurchasePage() {
                   onChange={handleProductFormChange}
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
+                    productFormErrors.purchasePrice
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                  }`}
+                  placeholder="Enter purchase price"
                 />
+                {productFormErrors.purchasePrice && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {productFormErrors.purchasePrice}
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
                   GST Rate (%)
                 </label>
                 <select
                   name="gstRate"
                   value={productFormData.gstRate}
                   onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 >
                   <option value="0">0%</option>
                   <option value="5">5%</option>
@@ -1236,55 +1305,6 @@ export default function NewPurchasePage() {
                   <option value="18">18%</option>
                   <option value="28">28%</option>
                 </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Stock Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Stock Quantity
-                </label>
-                <input
-                  type="number"
-                  name="stockQuantity"
-                  value={productFormData.stockQuantity}
-                  onChange={handleProductFormChange}
-                  min="0"
-                  step="1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Min Stock Level
-                </label>
-                <input
-                  type="number"
-                  name="minStockLevel"
-                  value={productFormData.minStockLevel}
-                  onChange={handleProductFormChange}
-                  min="0"
-                  step="1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rack/Location
-                </label>
-                <input
-                  type="text"
-                  name="rack"
-                  value={productFormData.rack}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                />
               </div>
             </div>
           </div>
