@@ -56,14 +56,9 @@ export default function NewSupplierPage() {
   const validateForm = () => {
     const newErrors = {};
 
-    // Name is mandatory
+    // Only name is mandatory
     if (!formData.name || formData.name.trim() === '') {
       newErrors.name = 'Supplier Name is required';
-    }
-
-    // Phone is mandatory
-    if (!formData.phone || formData.phone.trim() === '') {
-      newErrors.phone = 'Phone Number is required';
     }
 
     setErrors(newErrors);
@@ -155,30 +150,15 @@ export default function NewSupplierPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone <span className="text-red-500">*</span>
+                  Phone
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={formData.phone}
-                  onChange={(e) => {
-                    handleChange(e);
-                    if (errors.phone) {
-                      setErrors({ ...errors, phone: '' });
-                    }
-                  }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                    errors.phone
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                      : 'border-gray-300 focus:ring-emerald-500'
-                  }`}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
-                {errors.phone && (
-                  <p className="text-sm text-red-600 flex items-center mt-1">
-                    <HiExclamation className="w-4 h-4 mr-1" />
-                    {errors.phone}
-                  </p>
-                )}
               </div>
 
               <div>
@@ -264,14 +244,13 @@ export default function NewSupplierPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State 
+                    State
                   </label>
                   <input
                     type="text"
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
-                    
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>

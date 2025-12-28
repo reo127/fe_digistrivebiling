@@ -35,6 +35,7 @@ export default function NewPurchasePage() {
   // Supplier modal state
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [savingSupplier, setSavingSupplier] = useState(false);
+  const [supplierFormErrors, setSupplierFormErrors] = useState({});
   const [supplierFormData, setSupplierFormData] = useState({
     name: '',
     contactPerson: '',
@@ -106,10 +107,22 @@ export default function NewPurchasePage() {
     } else {
       setSupplierFormData({ ...supplierFormData, [name]: value });
     }
+    // Clear error for this field
+    if (supplierFormErrors[name]) {
+      setSupplierFormErrors({ ...supplierFormErrors, [name]: '' });
+    }
   };
 
   const handleCreateSupplier = async (e) => {
     e.preventDefault();
+
+    // Validate that name is provided
+    if (!supplierFormData.name || supplierFormData.name.trim() === '') {
+      setSupplierFormErrors({ name: 'Supplier Name is required' });
+      toast.error('Please enter supplier name');
+      return;
+    }
+
     setSavingSupplier(true);
 
     try {
@@ -144,6 +157,7 @@ export default function NewPurchasePage() {
         openingBalance: 0,
         notes: ''
       });
+      setSupplierFormErrors({});
       toast.success('Supplier added successfully!');
     } catch (error) {
       toast.error(error.message || 'An error occurred');
@@ -885,7 +899,10 @@ export default function NewPurchasePage() {
       {/* New Supplier Modal */}
       <Modal
         isOpen={showSupplierModal}
-        onClose={() => setShowSupplierModal(false)}
+        onClose={() => {
+          setShowSupplierModal(false);
+          setSupplierFormErrors({});
+        }}
         title="Add New Supplier"
         size="max-w-4xl"
       >
@@ -896,16 +913,25 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier Name 
+                  Supplier Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   name="name"
                   value={supplierFormData.name}
                   onChange={handleSupplierFormChange}
-                  
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                    supplierFormErrors.name
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                      : 'border-gray-300 focus:ring-emerald-500'
+                  }`}
                 />
+                {supplierFormErrors.name && (
+                  <p className="text-sm text-red-600 flex items-center mt-1">
+                    <HiExclamation className="w-4 h-4 mr-1" />
+                    {supplierFormErrors.name}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1116,7 +1142,10 @@ export default function NewPurchasePage() {
           <div className="flex justify-end gap-4 pt-4 border-t">
             <button
               type="button"
-              onClick={() => setShowSupplierModal(false)}
+              onClick={() => {
+                setShowSupplierModal(false);
+                setSupplierFormErrors({});
+              }}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
               Cancel
