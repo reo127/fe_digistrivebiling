@@ -82,7 +82,7 @@ export default function NewPurchasePage() {
   const loadData = async () => {
     try {
       const [suppliersData, productsData] = await Promise.all([
-        suppliersAPI.getAll(),
+        suppliersAPI.getAll({ isActive: true }),
         productsAPI.getAll()
       ]);
       setSuppliers(suppliersData);
@@ -127,8 +127,8 @@ export default function NewPurchasePage() {
 
     try {
       const newSupplier = await suppliersAPI.create(supplierFormData);
-      // Reload suppliers list
-      const suppliersData = await suppliersAPI.getAll();
+      // Reload suppliers list (only active ones)
+      const suppliersData = await suppliersAPI.getAll({ isActive: true });
       setSuppliers(suppliersData);
       // Auto-select the newly created supplier
       setFormData({ ...formData, supplier: newSupplier._id });
