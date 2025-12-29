@@ -7,7 +7,7 @@ import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import Modal from '@/components/Modal';
 import { productsAPI, customersAPI, invoicesAPI, shopAPI } from '@/utils/api';
-import { HiPlus, HiSearch, HiX } from 'react-icons/hi';
+import { HiPlus, HiSearch, HiX, HiExclamation } from 'react-icons/hi';
 
 export default function NewInvoice() {
   const { user, loading } = useAuth();
@@ -38,6 +38,7 @@ export default function NewInvoice() {
   // Customer modal state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerFormErrors, setCustomerFormErrors] = useState({});
   const [customerFormData, setCustomerFormData] = useState({
     name: '',
     phone: '',
@@ -91,10 +92,30 @@ export default function NewInvoice() {
   const handleCustomerFormChange = (e) => {
     const { name, value } = e.target;
     setCustomerFormData({ ...customerFormData, [name]: value });
+    // Clear error for this field
+    if (customerFormErrors[name]) {
+      setCustomerFormErrors({ ...customerFormErrors, [name]: '' });
+    }
   };
 
   const handleCreateCustomer = async (e) => {
     e.preventDefault();
+
+    // Validate name and phone are provided
+    const newErrors = {};
+    if (!customerFormData.name || customerFormData.name.trim() === '') {
+      newErrors.name = 'Customer Name is required';
+    }
+    if (!customerFormData.phone || customerFormData.phone.trim() === '') {
+      newErrors.phone = 'Phone Number is required';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setCustomerFormErrors(newErrors);
+      toast.error('Please fill all required fields');
+      return;
+    }
+
     setSavingCustomer(true);
 
     try {
@@ -118,6 +139,7 @@ export default function NewInvoice() {
         state: '',
         pincode: '',
       });
+      setCustomerFormErrors({});
       toast.success('Customer added successfully!');
     } catch (error) {
       toast.error(error.message || 'Failed to add customer');
@@ -208,8 +230,23 @@ export default function NewInvoice() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validation: Check if at least one item exists
     if (invoiceItems.length === 0) {
-      toast.warning('Please add at least one item');
+      toast.error('Please add at least one item to the invoice');
+      return;
+    }
+
+    // Validation: Check if all items have products selected
+    const emptyProductIndex = invoiceItems.findIndex(item => !item.product || item.product === '');
+    if (emptyProductIndex !== -1) {
+      toast.error(`Please select a product for item #${emptyProductIndex + 1}`);
+      return;
+    }
+
+    // Validation: Check if all items have quantity > 0
+    const zeroQuantityIndex = invoiceItems.findIndex(item => !item.quantity || item.quantity <= 0);
+    if (zeroQuantityIndex !== -1) {
+      toast.error(`Please enter quantity for item #${zeroQuantityIndex + 1}`);
       return;
     }
 
@@ -242,7 +279,21 @@ export default function NewInvoice() {
       toast.success('Invoice created successfully!');
       router.push(`/dashboard/invoices/${invoice._id}`);
     } catch (error) {
-      toast.error(error.message || 'Failed to create invoice');
+      // Show user-friendly error messages
+      let errorMessage = 'Failed to create invoice';
+
+      if (error.message) {
+        // Convert technical errors to user-friendly messages
+        if (error.message.includes('Cast to ObjectId failed') && error.message.includes('Product')) {
+          errorMessage = 'Please select a valid product for all items';
+        } else if (error.message.includes('validation failed')) {
+          errorMessage = 'Please check all fields and try again';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -713,7 +764,10 @@ export default function NewInvoice() {
       {/* New Customer Modal */}
       <Modal
         isOpen={showCustomerModal}
-        onClose={() => setShowCustomerModal(false)}
+        onClose={() => {
+          setShowCustomerModal(false);
+          setCustomerFormErrors({});
+        }}
         title="Add New Customer"
         size="max-w-2xl"
       >
@@ -721,30 +775,48 @@ export default function NewInvoice() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Customer Name 
+                Customer Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="name"
                 value={customerFormData.name}
                 onChange={handleCustomerFormChange}
-                
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                  customerFormErrors.name
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:ring-emerald-500'
+                }`}
               />
+              {customerFormErrors.name && (
+                <p className="text-sm text-red-600 flex items-center mt-1">
+                  <HiExclamation className="w-4 h-4 mr-1" />
+                  {customerFormErrors.name}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone 
+                Phone <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"
                 name="phone"
                 value={customerFormData.phone}
                 onChange={handleCustomerFormChange}
-                
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                  customerFormErrors.phone
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:ring-emerald-500'
+                }`}
               />
+              {customerFormErrors.phone && (
+                <p className="text-sm text-red-600 flex items-center mt-1">
+                  <HiExclamation className="w-4 h-4 mr-1" />
+                  {customerFormErrors.phone}
+                </p>
+              )}
             </div>
 
             <div>
@@ -769,7 +841,6 @@ export default function NewInvoice() {
                 name="gstin"
                 value={customerFormData.gstin}
                 onChange={handleCustomerFormChange}
-                maxLength={15}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
               />
             </div>
@@ -831,7 +902,10 @@ export default function NewInvoice() {
           <div className="flex justify-end gap-4 pt-4 border-t">
             <button
               type="button"
-              onClick={() => setShowCustomerModal(false)}
+              onClick={() => {
+                setShowCustomerModal(false);
+                setCustomerFormErrors({});
+              }}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
             >
               Cancel

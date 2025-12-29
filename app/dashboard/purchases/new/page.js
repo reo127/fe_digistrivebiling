@@ -350,6 +350,20 @@ export default function NewPurchasePage() {
       newErrors.items = 'Please add at least one item to the purchase';
     }
 
+    // Check if all items have products selected
+    const emptyProductIndex = formData.items.findIndex(item => !item.product || item.product === '');
+    if (emptyProductIndex !== -1) {
+      toast.error(`Please select a product for item #${emptyProductIndex + 1}`);
+      return false;
+    }
+
+    // Check if all items have quantity > 0
+    const zeroQuantityIndex = formData.items.findIndex(item => !item.quantity || item.quantity <= 0);
+    if (zeroQuantityIndex !== -1) {
+      toast.error(`Please enter quantity for item #${zeroQuantityIndex + 1}`);
+      return false;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -379,13 +393,16 @@ export default function NewPurchasePage() {
       router.push('/dashboard/purchases');
     } catch (error) {
       // Parse backend validation errors and show user-friendly messages
-      const errorMessage = error.message || 'An error occurred';
+      let errorMessage = error.message || 'An error occurred';
 
-      if (errorMessage.includes('validation failed')) {
-        toast.error('Please check all fields and try again');
-      } else {
-        toast.error(errorMessage);
+      // Convert technical errors to user-friendly messages
+      if (errorMessage.includes('Cast to ObjectId failed') && errorMessage.includes('Product')) {
+        errorMessage = 'Please select a valid product for all items';
+      } else if (errorMessage.includes('validation failed')) {
+        errorMessage = 'Please check all fields and try again';
       }
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
