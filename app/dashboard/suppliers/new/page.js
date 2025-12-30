@@ -104,7 +104,7 @@ export default function NewSupplierPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6 text-black">
           {/* Basic Information */}
-          <div>
+          <div >
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -121,11 +121,10 @@ export default function NewSupplierPage() {
                       setErrors({ ...errors, name: '' });
                     }
                   }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                    errors.name
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 text-gray-900 placeholder-gray-500 ${errors.name
                       ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                       : 'border-gray-300 focus:ring-emerald-500'
-                  }`}
+                    }`}
                 />
                 {errors.name && (
                   <p className="text-sm text-red-600 flex items-center mt-1">
@@ -144,7 +143,7 @@ export default function NewSupplierPage() {
                   name="contactPerson"
                   value={formData.contactPerson}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -157,7 +156,7 @@ export default function NewSupplierPage() {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -170,7 +169,7 @@ export default function NewSupplierPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
             </div>
@@ -182,16 +181,16 @@ export default function NewSupplierPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  GSTIN 
+                  GSTIN
                 </label>
                 <input
                   type="text"
                   name="gstin"
                   value={formData.gstin}
                   onChange={handleChange}
-                  
+
                   maxLength={15}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -205,7 +204,7 @@ export default function NewSupplierPage() {
                   value={formData.pan}
                   onChange={handleChange}
                   maxLength={10}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase text-gray-900 placeholder-gray-500"
                 />
               </div>
             </div>
@@ -224,7 +223,7 @@ export default function NewSupplierPage() {
                   value={formData.address}
                   onChange={handleChange}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -238,7 +237,7 @@ export default function NewSupplierPage() {
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                   />
                 </div>
 
@@ -251,7 +250,7 @@ export default function NewSupplierPage() {
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                   />
                 </div>
 
@@ -264,7 +263,7 @@ export default function NewSupplierPage() {
                     name="pincode"
                     value={formData.pincode}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                   />
                 </div>
               </div>
@@ -283,7 +282,7 @@ export default function NewSupplierPage() {
                   name="paymentTerms"
                   value={formData.paymentTerms}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900"
                 >
                   <option value="IMMEDIATE">Immediate</option>
                   <option value="NET_15">Net 15 Days</option>
@@ -303,7 +302,7 @@ export default function NewSupplierPage() {
                   value={formData.creditLimit}
                   onChange={handleChange}
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -316,7 +315,7 @@ export default function NewSupplierPage() {
                   name="openingBalance"
                   value={formData.openingBalance}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
             </div>
@@ -332,7 +331,7 @@ export default function NewSupplierPage() {
               value={formData.notes}
               onChange={handleChange}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
               placeholder="Any additional notes about this supplier..."
             />
           </div>

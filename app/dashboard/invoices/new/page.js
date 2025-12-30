@@ -313,7 +313,7 @@ export default function NewInvoice() {
 
         <form onSubmit={handleSubmit} className="space-y-6 text-black">
           {/* Customer Selection */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-black">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -416,7 +416,7 @@ export default function NewInvoice() {
                   
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                 />
               </div>
 
@@ -428,7 +428,7 @@ export default function NewInvoice() {
                   type="tel"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                 />
               </div>
 
@@ -442,7 +442,7 @@ export default function NewInvoice() {
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                 />
               </div>
 
@@ -454,7 +454,7 @@ export default function NewInvoice() {
                   
                   value={taxType}
                   onChange={(e) => setTaxType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                 >
                   <option value="CGST_SGST">CGST + SGST (Same State)</option>
                   <option value="IGST">IGST (Interstate)</option>
@@ -474,7 +474,7 @@ export default function NewInvoice() {
                     step="0.01"
                     value={cessRate}
                     onChange={(e) => setCessRate(Number(e.target.value))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
                     placeholder="Enter CESS rate (e.g., 1 for 1%)"
                   />
                 </div>
@@ -489,7 +489,7 @@ export default function NewInvoice() {
               <button
                 type="button"
                 onClick={addItem}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 text-black"
               >
                 + Add Item
               </button>
@@ -498,7 +498,7 @@ export default function NewInvoice() {
             <div className="space-y-4">
               {/* Column Headers */}
               {invoiceItems.length > 0 && (
-                <div className="flex gap-4 px-4 text-xs font-semibold text-gray-600 uppercase">
+                <div className="flex gap-4 px-4 text-xs font-semibold text-gray-600 uppercase text-black">
                   <div className="flex-1">Product</div>
                   <div className="w-20">Qty</div>
                   <div className="w-28">Price</div>
@@ -772,7 +772,7 @@ export default function NewInvoice() {
         size="max-w-2xl"
       >
         <form onSubmit={handleCreateCustomer} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-black">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Customer Name <span className="text-red-500">*</span>

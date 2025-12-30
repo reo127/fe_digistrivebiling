@@ -443,11 +443,10 @@ export default function NewPurchasePage() {
                           setErrors({ ...errors, supplier: '' });
                         }
                       }}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                        errors.supplier
-                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                          : 'border-gray-300 focus:ring-emerald-500'
-                      }`}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${errors.supplier
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                        : 'border-gray-300 focus:ring-emerald-500'
+                        }`}
                     >
                       <option value="">Select Supplier</option>
                       {suppliers.map((supplier) => (
@@ -562,7 +561,7 @@ export default function NewPurchasePage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Product 
+                          Product
                         </label>
                         <div className="flex gap-2">
                           <select
@@ -615,7 +614,7 @@ export default function NewPurchasePage() {
                           type="number"
                           value={item.quantity}
                           onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                          
+
                           min="1"
                           step="1"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
@@ -936,11 +935,10 @@ export default function NewPurchasePage() {
                   name="name"
                   value={supplierFormData.name}
                   onChange={handleSupplierFormChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                    supplierFormErrors.name
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                      : 'border-gray-300 focus:ring-emerald-500'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 text-gray-900 placeholder-gray-500 ${supplierFormErrors.name
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:ring-emerald-500'
+                    }`}
                 />
                 {supplierFormErrors.name && (
                   <p className="text-sm text-red-600 flex items-center mt-1">
@@ -959,21 +957,21 @@ export default function NewPurchasePage() {
                   name="contactPerson"
                   value={supplierFormData.contactPerson}
                   onChange={handleSupplierFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone 
+                  Phone
                 </label>
                 <input
                   type="tel"
                   name="phone"
                   value={supplierFormData.phone}
                   onChange={handleSupplierFormChange}
-                  
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -986,7 +984,7 @@ export default function NewPurchasePage() {
                   name="email"
                   value={supplierFormData.email}
                   onChange={handleSupplierFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
             </div>
@@ -998,16 +996,16 @@ export default function NewPurchasePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  GSTIN 
+                  GSTIN
                 </label>
                 <input
                   type="text"
                   name="gstin"
                   value={supplierFormData.gstin}
                   onChange={handleSupplierFormChange}
-                  
+
                   maxLength={15}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1021,7 +1019,7 @@ export default function NewPurchasePage() {
                   value={supplierFormData.pan}
                   onChange={handleSupplierFormChange}
                   maxLength={10}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 uppercase text-gray-900 placeholder-gray-500"
                 />
               </div>
             </div>
@@ -1040,7 +1038,7 @@ export default function NewPurchasePage() {
                   value={supplierFormData.address}
                   onChange={handleSupplierFormChange}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1054,21 +1052,21 @@ export default function NewPurchasePage() {
                     name="city"
                     value={supplierFormData.city}
                     onChange={handleSupplierFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State 
+                    State
                   </label>
                   <input
                     type="text"
                     name="state"
                     value={supplierFormData.state}
                     onChange={handleSupplierFormChange}
-                    
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                   />
                 </div>
 
@@ -1081,7 +1079,7 @@ export default function NewPurchasePage() {
                     name="pincode"
                     value={supplierFormData.pincode}
                     onChange={handleSupplierFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                   />
                 </div>
               </div>
@@ -1100,7 +1098,7 @@ export default function NewPurchasePage() {
                   name="paymentTerms"
                   value={supplierFormData.paymentTerms}
                   onChange={handleSupplierFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900"
                 >
                   <option value="IMMEDIATE">Immediate</option>
                   <option value="NET_15">Net 15 Days</option>
@@ -1120,7 +1118,7 @@ export default function NewPurchasePage() {
                   value={supplierFormData.creditLimit}
                   onChange={handleSupplierFormChange}
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
 
@@ -1133,7 +1131,7 @@ export default function NewPurchasePage() {
                   name="openingBalance"
                   value={supplierFormData.openingBalance}
                   onChange={handleSupplierFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
                 />
               </div>
             </div>
@@ -1149,7 +1147,7 @@ export default function NewPurchasePage() {
               value={supplierFormData.notes}
               onChange={handleSupplierFormChange}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-gray-900 placeholder-gray-500"
               placeholder="Any additional notes about this supplier..."
             />
           </div>
@@ -1202,11 +1200,10 @@ export default function NewPurchasePage() {
                   name="name"
                   value={productFormData.name}
                   onChange={handleProductFormChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
-                    productFormErrors.name
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all text-gray-900 placeholder-gray-500 ${productFormErrors.name
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                    }`}
                   placeholder="Enter product name"
                 />
                 {productFormErrors.name && (
@@ -1226,7 +1223,7 @@ export default function NewPurchasePage() {
                   name="hsnCode"
                   value={productFormData.hsnCode}
                   onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-500"
                   placeholder="Enter HSN code"
                 />
               </div>
@@ -1239,7 +1236,7 @@ export default function NewPurchasePage() {
                   name="unit"
                   value={productFormData.unit}
                   onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-500"
                 >
                   <option value="PCS">Pieces</option>
                   <option value="BOX">Box</option>
@@ -1267,11 +1264,10 @@ export default function NewPurchasePage() {
                   onChange={handleProductFormChange}
                   min="0"
                   step="0.01"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
-                    productFormErrors.mrp
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all text-gray-900 placeholder-gray-500 ${productFormErrors.mrp
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                    }`}
                   placeholder="Enter MRP"
                 />
                 {productFormErrors.mrp && (
@@ -1293,11 +1289,10 @@ export default function NewPurchasePage() {
                   onChange={handleProductFormChange}
                   min="0"
                   step="0.01"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
-                    productFormErrors.sellingPrice
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all text-gray-900 placeholder-gray-500 ${productFormErrors.sellingPrice
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                    }`}
                   placeholder="Enter selling price"
                 />
                 {productFormErrors.sellingPrice && (
@@ -1319,11 +1314,10 @@ export default function NewPurchasePage() {
                   onChange={handleProductFormChange}
                   min="0"
                   step="0.01"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all ${
-                    productFormErrors.purchasePrice
-                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                      : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
-                  }`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all text-gray-900 placeholder-gray-500 ${productFormErrors.purchasePrice
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                    : 'border-gray-300 focus:ring-emerald-500 focus:border-transparent'
+                    }`}
                   placeholder="Enter purchase price"
                 />
                 {productFormErrors.purchasePrice && (
@@ -1342,7 +1336,7 @@ export default function NewPurchasePage() {
                   name="gstRate"
                   value={productFormData.gstRate}
                   onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-gray-900"
                 >
                   <option value="0">0%</option>
                   <option value="5">5%</option>
