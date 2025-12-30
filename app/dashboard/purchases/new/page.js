@@ -812,8 +812,7 @@ export default function NewPurchasePage() {
                   >
                     <option value="CASH">Cash</option>
                     <option value="CREDIT">Credit</option>
-                    <option value="BANK">Bank Transfer</option>
-                    <option value="UPI">UPI</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
                     <option value="CHEQUE">Cheque</option>
                   </select>
                 </div>
