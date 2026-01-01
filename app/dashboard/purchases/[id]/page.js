@@ -203,12 +203,12 @@ export default function PurchaseDetail() {
                     <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
                     <td className="px-4 py-3">
                       <div className="text-sm font-medium text-gray-900">{item.productName}</div>
-                      {item.batchNo && (
-                        <div className="text-xs text-gray-500">Batch: {item.batchNo}</div>
+                      {(item.batchNo || item.batch?.batchNo) && (
+                        <div className="text-xs text-gray-500">Batch: {item.batchNo || item.batch?.batchNo}</div>
                       )}
-                      {item.expiryDate && (
+                      {(item.expiryDate || item.batch?.expiryDate) && (
                         <div className="text-xs text-gray-500">
-                          Exp: {new Date(item.expiryDate).toLocaleDateString('en-IN')}
+                          Exp: {new Date(item.expiryDate || item.batch?.expiryDate).toLocaleDateString('en-IN')}
                         </div>
                       )}
                       {item.freeQuantity > 0 && (

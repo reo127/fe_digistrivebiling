@@ -88,7 +88,12 @@ export default function Products() {
       newErrors.stockQuantity = 'Stock Quantity is required and cannot be negative';
     }
 
-    // Batch fields are now optional - auto-generated if not provided
+    // Batch Number is optional - will be auto-generated if not provided
+
+    // Batch Expiry Date is mandatory if stock quantity > 0
+    if (parseFloat(formData.stockQuantity) > 0 && (!formData.batchExpiryDate || formData.batchExpiryDate === '')) {
+      newErrors.batchExpiryDate = 'Batch Expiry Date is required when adding stock';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -543,9 +548,9 @@ export default function Products() {
                             <HiExclamation className="w-5 h-5 text-blue-600 mt-0.5" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-semibold text-blue-900">Batch Details (Optional)</h4>
+                            <h4 className="text-sm font-semibold text-blue-900">Batch Details</h4>
                             <p className="text-xs text-blue-700 mt-1">
-                              Batch number will be auto-generated if not provided. Expiry date defaults to 1 year from today if left empty.
+                              Batch number will be auto-generated if left empty. Expiry date is mandatory for tracking purposes.
                             </p>
                           </div>
                         </div>
@@ -558,7 +563,9 @@ export default function Products() {
                         <input
                           type="text"
                           value={formData.batchNo}
-                          onChange={(e) => setFormData({ ...formData, batchNo: e.target.value })}
+                          onChange={(e) => {
+                            setFormData({ ...formData, batchNo: e.target.value });
+                          }}
                           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                           placeholder="Auto-generated if left empty"
                         />
@@ -566,15 +573,30 @@ export default function Products() {
 
                       <div className="space-y-2">
                         <label className="block text-sm font-semibold text-gray-700">
-                          Batch Expiry Date <span className="text-xs text-gray-500">(Optional)</span>
+                          Batch Expiry Date <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="date"
                           value={formData.batchExpiryDate}
-                          onChange={(e) => setFormData({ ...formData, batchExpiryDate: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                          placeholder="Defaults to 1 year from today"
+                          onChange={(e) => {
+                            setFormData({ ...formData, batchExpiryDate: e.target.value });
+                            if (errors.batchExpiryDate) {
+                              setErrors({ ...errors, batchExpiryDate: '' });
+                            }
+                          }}
+                          min={new Date().toISOString().split('T')[0]}
+                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
+                            errors.batchExpiryDate
+                              ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                              : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                          }`}
                         />
+                        {errors.batchExpiryDate && (
+                          <p className="text-sm text-red-600 flex items-center mt-1">
+                            <HiExclamation className="w-4 h-4 mr-1" />
+                            {errors.batchExpiryDate}
+                          </p>
+                        )}
                       </div>
                     </>
                   )}
