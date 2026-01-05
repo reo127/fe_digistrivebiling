@@ -48,6 +48,7 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [shopSettings, setShopSettings] = useState(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
@@ -58,12 +59,27 @@ export default function DashboardLayout({ children }) {
         setShopSettings(data);
       } catch (error) {
         console.error('Error loading shop settings:', error);
+      } finally {
+        setSettingsLoaded(true);
       }
     };
+
     loadShopSettings();
+
+    // Listen for settings updates
+    const handleSettingsUpdate = () => {
+      loadShopSettings();
+    };
+
+    window.addEventListener('shopSettingsUpdated', handleSettingsUpdate);
+
+    return () => {
+      window.removeEventListener('shopSettingsUpdated', handleSettingsUpdate);
+    };
   }, []);
 
   const shopName = shopSettings?.shopName || APP_CONFIG.shopName;
+  const logoSrc = shopSettings?.logo || '/Logo.jpeg';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -75,26 +91,46 @@ export default function DashboardLayout({ children }) {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-xl">
           {/* Logo & Toggle */}
           <div className="flex items-center justify-between h-16 px-6 bg-white relative overflow-hidden border-b border-gray-200">
-            {!collapsed && (
+            {!collapsed && settingsLoaded && (
               <div className="relative h-12 w-40">
-                <Image
-                  src="/Logo.jpeg"
-                  alt={shopName}
-                  fill
-                  className="object-contain"
-                  priority
-                />
+                {logoSrc.startsWith('data:') ? (
+                  <img
+                    key={logoSrc.substring(0, 100)}
+                    src={logoSrc}
+                    alt={shopName}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <Image
+                    key={logoSrc}
+                    src={logoSrc}
+                    alt={shopName}
+                    fill
+                    className="object-contain"
+                    priority
+                  />
+                )}
               </div>
             )}
-            {collapsed && (
+            {collapsed && settingsLoaded && (
               <div className="relative h-10 w-10">
-                <Image
-                  src="/Logo.jpeg"
-                  alt={shopName}
-                  fill
-                  className="object-contain"
-                  priority
-                />
+                {logoSrc.startsWith('data:') ? (
+                  <img
+                    key={logoSrc.substring(0, 100)}
+                    src={logoSrc}
+                    alt={shopName}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <Image
+                    key={logoSrc}
+                    src={logoSrc}
+                    alt={shopName}
+                    fill
+                    className="object-contain"
+                    priority
+                  />
+                )}
               </div>
             )}
             <button
@@ -186,15 +222,27 @@ export default function DashboardLayout({ children }) {
           <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <div className="relative flex flex-col w-80 h-full bg-white shadow-2xl transform transition-transform duration-300">
             <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200">
-              <div className="relative h-12 w-40">
-                <Image
-                  src="/Logo.jpeg"
-                  alt={shopName}
-                  fill
-                  className="object-contain"
-                  priority
-                />
-              </div>
+              {settingsLoaded && (
+                <div className="relative h-12 w-40">
+                  {logoSrc.startsWith('data:') ? (
+                    <img
+                      key={logoSrc.substring(0, 100)}
+                      src={logoSrc}
+                      alt={shopName}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <Image
+                      key={logoSrc}
+                      src={logoSrc}
+                      alt={shopName}
+                      fill
+                      className="object-contain"
+                      priority
+                    />
+                  )}
+                </div>
+              )}
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
@@ -261,15 +309,27 @@ export default function DashboardLayout({ children }) {
           >
             <HiMenu className="w-6 h-6" />
           </button>
-          <div className="relative h-10 w-32">
-            <Image
-              src="/Logo.jpeg"
-              alt={shopName}
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
+          {settingsLoaded && (
+            <div className="relative h-10 w-32">
+              {logoSrc.startsWith('data:') ? (
+                <img
+                  key={logoSrc.substring(0, 100)}
+                  src={logoSrc}
+                  alt={shopName}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <Image
+                  key={logoSrc}
+                  src={logoSrc}
+                  alt={shopName}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              )}
+            </div>
+          )}
           <div className="w-10"></div>
         </div>
 

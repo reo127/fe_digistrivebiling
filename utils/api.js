@@ -38,7 +38,14 @@ export const authAPI = {
 };
 
 export const shopAPI = {
-  get: () => apiCall('/shop'),
+  get: () => apiCall('/shop', {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  }),
   update: (data) => apiCall('/shop', {
     method: 'POST',
     body: JSON.stringify(data),

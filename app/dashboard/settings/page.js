@@ -18,7 +18,9 @@ import {
   HiMail,
   HiLocationMarker,
   HiDocument,
-  HiExclamation
+  HiExclamation,
+  HiPhotograph,
+  HiUpload
 } from 'react-icons/hi';
 
 export default function Settings() {
@@ -36,10 +38,13 @@ export default function Settings() {
     email: '',
     gstin: '',
     defaultTaxType: 'CGST_SGST',
+    logo: '',
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [errors, setErrors] = useState({});
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -64,10 +69,58 @@ export default function Settings() {
           email: data.email || '',
           gstin: data.gstin || '',
           defaultTaxType: data.defaultTaxType || 'CGST_SGST',
+          logo: data.logo || '',
         });
+        // Set logo preview if exists
+        if (data.logo) {
+          setLogoPreview(data.logo);
+        }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
+    }
+  };
+
+  const handleLogoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload only PNG or JPEG images');
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file size (2MB = 2 * 1024 * 1024 bytes)
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('Logo size must be less than 2MB');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingLogo(true);
+
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setLogoPreview(base64String);
+        setFormData({ ...formData, logo: base64String });
+        setUploadingLogo(false);
+        toast.success('Logo uploaded successfully');
+      };
+      reader.onerror = () => {
+        toast.error('Error reading file');
+        setUploadingLogo(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      toast.error('Error uploading logo');
+      setUploadingLogo(false);
     }
   };
 
@@ -138,6 +191,10 @@ export default function Settings() {
       }
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
       toast.success('Settings saved successfully!');
+
+      // Trigger custom event to refresh shop settings in DashboardLayout
+      window.dispatchEvent(new CustomEvent('shopSettingsUpdated'));
+
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
@@ -328,6 +385,87 @@ export default function Settings() {
                     {errors.email}
                   </p>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Logo Section */}
+          <div className="space-y-6">
+            <div className="flex items-center space-x-2 pb-4 border-b border-gray-200">
+              <HiPhotograph className="w-5 h-5 text-green-600" />
+              <h2 className="text-xl font-bold text-gray-900">Shop Logo</h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-start space-x-6">
+                {/* Logo Preview */}
+                <div className="flex-shrink-0">
+                  <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50 overflow-hidden">
+                    {logoPreview ? (
+                      <img
+                        src={logoPreview}
+                        alt="Shop Logo"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <HiPhotograph className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-xs text-gray-500">No logo</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Upload Controls */}
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Upload Logo
+                    </label>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Upload your shop logo. Max size: 2MB. Formats: PNG, JPG, JPEG
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleLogoChange}
+                        className="hidden"
+                        disabled={uploadingLogo}
+                      />
+                      <div className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50">
+                        {uploadingLogo ? (
+                          <>
+                            <LoadingSpinner size="sm" text="" />
+                            <span className="ml-2">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <HiUpload className="w-4 h-4 mr-2" />
+                            Choose Logo
+                          </>
+                        )}
+                      </div>
+                    </label>
+
+                    {logoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogoPreview(null);
+                          setFormData({ ...formData, logo: '' });
+                          toast.success('Logo removed');
+                        }}
+                        className="px-4 py-2 bg-red-50 text-red-600 text-sm font-semibold rounded-lg hover:bg-red-100 transition-all"
+                      >
+                        Remove Logo
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
