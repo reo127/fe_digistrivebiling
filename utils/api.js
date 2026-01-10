@@ -146,12 +146,14 @@ export const purchasesAPI = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  update: (id, data) => apiCall(`/purchases/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
   updatePayment: (id, data) => apiCall(`/purchases/${id}/payment`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  // Note: Purchases cannot be edited or deleted after creation due to inventory/accounting implications
-  // Use purchase returns instead for corrections
 };
 
 // Purchase Returns API

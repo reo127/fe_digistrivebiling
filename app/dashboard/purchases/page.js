@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { TableSkeleton } from '@/components/SkeletonLoader';
 import { purchasesAPI } from '@/utils/api';
-import { HiPlus, HiSearch, HiEye, HiCurrencyRupee } from 'react-icons/hi';
+import { HiPlus, HiSearch, HiEye, HiCurrencyRupee, HiPencil } from 'react-icons/hi';
 import Link from 'next/link';
 
 export default function PurchasesPage() {
@@ -191,12 +191,24 @@ export default function PurchasesPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => router.push(`/dashboard/purchases/${purchase._id}`)}
-                          className="text-emerald-600 hover:text-emerald-900"
-                        >
-                          <HiEye className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center justify-end gap-3">
+                          {!purchase.isReturned && (
+                            <button
+                              onClick={() => router.push(`/dashboard/purchases/${purchase._id}/edit`)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Edit purchase"
+                            >
+                              <HiPencil className="w-5 h-5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => router.push(`/dashboard/purchases/${purchase._id}`)}
+                            className="text-emerald-600 hover:text-emerald-900"
+                            title="View details"
+                          >
+                            <HiEye className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

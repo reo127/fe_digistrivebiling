@@ -95,6 +95,20 @@ export default function PurchaseDetail() {
             ← Back
           </button>
           <div className="flex gap-3">
+            {!purchase.isReturned && (
+              <button
+                onClick={() => router.push(`/dashboard/purchases/${params.id}/edit`)}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700"
+                title="Edit purchase details"
+              >
+                Edit Purchase
+              </button>
+            )}
+            {purchase.isReturned && (
+              <div className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium cursor-not-allowed" title="Cannot edit purchases with returns">
+                Edit Purchase (Has Returns)
+              </div>
+            )}
             {purchase.balanceAmount > 0 && (
               <button
                 onClick={() => {
