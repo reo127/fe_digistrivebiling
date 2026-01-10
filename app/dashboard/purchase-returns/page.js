@@ -13,6 +13,7 @@ export default function PurchaseReturnsPage() {
   const router = useRouter();
   const toast = useToast();
   const [purchaseReturns, setPurchaseReturns] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -22,8 +23,12 @@ export default function PurchaseReturnsPage() {
 
   const loadData = async () => {
     try {
-      const data = await purchaseReturnsAPI.getAll();
-      setPurchaseReturns(data);
+      const [returnsData, statsData] = await Promise.all([
+        purchaseReturnsAPI.getAll(),
+        purchaseReturnsAPI.getStats()
+      ]);
+      setPurchaseReturns(returnsData);
+      setStats(statsData);
     } catch (error) {
       console.error('Error loading purchase returns:', error);
       toast.error(error.message || 'An error occurred');
@@ -37,14 +42,6 @@ export default function PurchaseReturnsPage() {
     ret.purchase?.purchaseNumber?.toLowerCase().includes(search.toLowerCase()) ||
     ret.supplier?.name?.toLowerCase().includes(search.toLowerCase())
   );
-
-  const totalAmount = purchaseReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
-  const thisMonthReturns = purchaseReturns.filter(ret => {
-    const returnDate = new Date(ret.returnDate);
-    const now = new Date();
-    return returnDate.getMonth() === now.getMonth() && returnDate.getFullYear() === now.getFullYear();
-  });
-  const thisMonthAmount = thisMonthReturns.reduce((sum, ret) => sum + (ret.totalAmount || 0), 0);
 
   return (
     <DashboardLayout>
@@ -68,18 +65,32 @@ export default function PurchaseReturnsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-gray-500">Total Returns</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{purchaseReturns.length}</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                stats?.totalReturns || 0
+              )}
+            </div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-gray-500">Total Amount</div>
             <div className="text-3xl font-bold text-blue-600 mt-2">
-              ₹{totalAmount.toLocaleString('en-IN')}
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.totalAmount?.toLocaleString('en-IN') || '0'}`
+              )}
             </div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-gray-500">This Month</div>
             <div className="text-3xl font-bold text-emerald-600 mt-2">
-              ₹{thisMonthAmount.toLocaleString('en-IN')}
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.thisMonth?.toLocaleString('en-IN') || '0'}`
+              )}
             </div>
           </div>
         </div>

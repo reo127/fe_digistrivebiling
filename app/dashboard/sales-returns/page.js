@@ -13,6 +13,7 @@ export default function SalesReturnsPage() {
   const router = useRouter();
   const toast = useToast();
   const [salesReturns, setSalesReturns] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -22,8 +23,12 @@ export default function SalesReturnsPage() {
 
   const loadData = async () => {
     try {
-      const data = await salesReturnsAPI.getAll();
-      setSalesReturns(data);
+      const [returnsData, statsData] = await Promise.all([
+        salesReturnsAPI.getAll(),
+        salesReturnsAPI.getStats()
+      ]);
+      setSalesReturns(returnsData);
+      setStats(statsData);
     } catch (error) {
       console.error('Error loading sales returns:', error);
       toast.error(error.message || 'An error occurred');
@@ -38,15 +43,6 @@ export default function SalesReturnsPage() {
     ret.originalInvoiceNumber?.toLowerCase().includes(search.toLowerCase()) ||
     ret.customer?.name?.toLowerCase().includes(search.toLowerCase())
   );
-
-  const totalAmount = salesReturns.reduce((sum, ret) => sum + (ret.grandTotal || 0), 0);
-  const totalRefunded = salesReturns.reduce((sum, ret) => sum + (ret.refundedAmount || 0), 0);
-  const thisMonthReturns = salesReturns.filter(ret => {
-    const returnDate = new Date(ret.returnDate);
-    const now = new Date();
-    return returnDate.getMonth() === now.getMonth() && returnDate.getFullYear() === now.getFullYear();
-  });
-  const thisMonthAmount = thisMonthReturns.reduce((sum, ret) => sum + (ret.grandTotal || 0), 0);
 
   const getRefundStatusColor = (status) => {
     switch (status) {
@@ -79,24 +75,42 @@ export default function SalesReturnsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-gray-500">Total Returns</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{salesReturns.length}</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                stats?.totalReturns || 0
+              )}
+            </div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-gray-500">Total Amount</div>
             <div className="text-3xl font-bold text-red-600 mt-2">
-              ₹{totalAmount.toLocaleString('en-IN')}
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.totalAmount?.toLocaleString('en-IN') || '0'}`
+              )}
             </div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-gray-500">Total Refunded</div>
             <div className="text-3xl font-bold text-orange-600 mt-2">
-              ₹{totalRefunded.toLocaleString('en-IN')}
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.totalRefunded?.toLocaleString('en-IN') || '0'}`
+              )}
             </div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="text-sm text-gray-500">This Month</div>
             <div className="text-3xl font-bold text-emerald-600 mt-2">
-              ₹{thisMonthAmount.toLocaleString('en-IN')}
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.thisMonth?.toLocaleString('en-IN') || '0'}`
+              )}
             </div>
           </div>
         </div>

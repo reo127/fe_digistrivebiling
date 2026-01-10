@@ -92,32 +92,48 @@ export default function ExpensesPage() {
         </div>
 
         {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">Total Expenses</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">{stats.totalCount}</div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">Total Amount</div>
-              <div className="text-3xl font-bold text-red-600 mt-2">
-                ₹{stats.totalAmount?.toLocaleString('en-IN')}
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">This Month</div>
-              <div className="text-3xl font-bold text-orange-600 mt-2">
-                ₹{stats.thisMonth?.toLocaleString('en-IN')}
-              </div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">This Year</div>
-              <div className="text-3xl font-bold text-blue-600 mt-2">
-                ₹{stats.thisYear?.toLocaleString('en-IN')}
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="text-sm text-gray-500">Total Expenses</div>
+            <div className="text-3xl font-bold text-gray-900 mt-2">
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                stats?.totalCount || 0
+              )}
             </div>
           </div>
-        )}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="text-sm text-gray-500">Total Amount</div>
+            <div className="text-3xl font-bold text-red-600 mt-2">
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.totalAmount?.toLocaleString('en-IN') || '0'}`
+              )}
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="text-sm text-gray-500">This Month</div>
+            <div className="text-3xl font-bold text-orange-600 mt-2">
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.thisMonth?.toLocaleString('en-IN') || '0'}`
+              )}
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="text-sm text-gray-500">This Year</div>
+            <div className="text-3xl font-bold text-blue-600 mt-2">
+              {loading ? (
+                <span className="text-gray-400 animate-pulse">...</span>
+              ) : (
+                `₹${stats?.thisYear?.toLocaleString('en-IN') || '0'}`
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Filters */}
         <div className="bg-white p-4 rounded-lg shadow space-y-4">

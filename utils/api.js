@@ -158,6 +158,7 @@ export const purchasesAPI = {
 
 // Purchase Returns API
 export const purchaseReturnsAPI = {
+  getStats: () => apiCall('/purchase-returns/stats'),
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return apiCall(`/purchase-returns?${query}`);
@@ -171,6 +172,7 @@ export const purchaseReturnsAPI = {
 
 // Sales Returns API
 export const salesReturnsAPI = {
+  getStats: () => apiCall('/sales-returns/stats'),
   getAll: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return apiCall(`/sales-returns?${query}`);
