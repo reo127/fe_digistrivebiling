@@ -109,6 +109,9 @@ export const invoicesAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
+  delete: (id) => apiCall(`/invoices/${id}`, {
+    method: 'DELETE',
+  }),
 };
 
 // Suppliers API
