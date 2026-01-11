@@ -101,12 +101,14 @@ export const invoicesAPI = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  update: (id, data) => apiCall(`/invoices/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
   updatePayment: (id, data) => apiCall(`/invoices/${id}/payment`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
-  // Note: Invoices cannot be edited or deleted after creation due to inventory/accounting implications
-  // Use sales returns instead for corrections
 };
 
 // Suppliers API
