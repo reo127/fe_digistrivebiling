@@ -1,4 +1,4 @@
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api`;
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api`;
 
 export const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
@@ -17,7 +17,19 @@ export const apiCall = async (endpoint, options = {}) => {
     headers,
   });
 
-  const data = await response.json();
+  // Check if response is JSON before parsing
+  const contentType = response.headers.get('content-type');
+  const isJson = contentType && contentType.includes('application/json');
+
+  let data;
+  if (isJson) {
+    data = await response.json();
+  } else {
+    // If not JSON, read as text (likely HTML error page)
+    const text = await response.text();
+    data = { message: `Server error: ${response.status} ${response.statusText}` };
+    console.error('Non-JSON response:', text.substring(0, 200));
+  }
 
   if (!response.ok) {
     throw new Error(data.message || 'Something went wrong');
@@ -158,6 +170,18 @@ export const purchasesAPI = {
   updatePayment: (id, data) => apiCall(`/purchases/${id}/payment`, {
     method: 'PUT',
     body: JSON.stringify(data),
+  }),
+  // Multiple payments
+  addPayment: (id, data) => apiCall(`/purchases/${id}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  editPayment: (id, paymentId, data) => apiCall(`/purchases/${id}/payments/${paymentId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  deletePayment: (id, paymentId) => apiCall(`/purchases/${id}/payments/${paymentId}`, {
+    method: 'DELETE',
   }),
 };
 

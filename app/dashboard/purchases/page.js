@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { TableSkeleton } from '@/components/SkeletonLoader';
 import { purchasesAPI } from '@/utils/api';
-import { HiPlus, HiSearch, HiEye, HiCurrencyRupee, HiPencil } from 'react-icons/hi';
+import { HiPlus, HiSearch, HiEye, HiCurrencyRupee, HiPencil, HiX } from 'react-icons/hi';
 import Link from 'next/link';
 
 export default function PurchasesPage() {
@@ -16,6 +16,18 @@ export default function PurchasesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [stats, setStats] = useState(null);
+
+  // Quick payment modal states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState(null);
+  const [paymentFormData, setPaymentFormData] = useState({
+    amount: '',
+    paymentMethod: 'CASH',
+    paymentDate: new Date().toISOString().split('T')[0],
+    referenceNumber: '',
+    notes: ''
+  });
+  const [submittingPayment, setSubmittingPayment] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -49,6 +61,43 @@ export default function PurchasesPage() {
       case 'PARTIAL': return 'bg-yellow-100 text-yellow-800';
       case 'UNPAID': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const openQuickPaymentModal = (purchase) => {
+    setSelectedPurchase(purchase);
+    setPaymentFormData({
+      amount: purchase.balanceAmount.toString(),
+      paymentMethod: 'CASH',
+      paymentDate: new Date().toISOString().split('T')[0],
+      referenceNumber: '',
+      notes: ''
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleQuickPayment = async (e) => {
+    e.preventDefault();
+    setSubmittingPayment(true);
+
+    try {
+      const paymentData = {
+        amount: parseFloat(paymentFormData.amount),
+        paymentMethod: paymentFormData.paymentMethod,
+        paymentDate: paymentFormData.paymentDate,
+        referenceNumber: paymentFormData.referenceNumber,
+        notes: paymentFormData.notes
+      };
+
+      await purchasesAPI.addPayment(selectedPurchase._id, paymentData);
+      toast.success('Payment recorded successfully!');
+      setShowPaymentModal(false);
+      loadData(); // Reload purchases to show updated payment status
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error(error.message || 'An error occurred');
+    } finally {
+      setSubmittingPayment(false);
     }
   };
 
@@ -170,7 +219,7 @@ export default function PurchasesPage() {
                         <div className="text-xs text-gray-500">{purchase.supplier?.gstin}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {purchase.billNumber}
+                        {purchase.supplierInvoiceNo || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {purchase.items?.length} items
@@ -179,9 +228,9 @@ export default function PurchasesPage() {
                         <div className="text-sm font-medium text-gray-900">
                           ₹{purchase.grandTotal?.toLocaleString('en-IN')}
                         </div>
-                        {purchase.paidAmount > 0 && purchase.paymentStatus !== 'PAID' && (
-                          <div className="text-xs text-gray-500">
-                            Paid: ₹{purchase.paidAmount?.toLocaleString('en-IN')}
+                        {purchase.balanceAmount > 0 && (
+                          <div className="text-xs text-red-600 font-semibold">
+                            Due: ₹{purchase.balanceAmount?.toLocaleString('en-IN')}
                           </div>
                         )}
                       </td>
@@ -191,23 +240,43 @@ export default function PurchasesPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-3">
-                          {!purchase.isReturned && (
+                        <div className="inline-flex items-center gap-2">
+                          {/* Record Payment Button - Fixed width for alignment */}
+                          <div className="w-10">
+                            {purchase.balanceAmount > 0 && (
+                              <button
+                                onClick={() => openQuickPaymentModal(purchase)}
+                                className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                title="Record Payment"
+                              >
+                                <HiCurrencyRupee className="w-5 h-5" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Edit Button - Fixed width for alignment */}
+                          <div className="w-10">
+                            {!purchase.isReturned && (
+                              <button
+                                onClick={() => router.push(`/dashboard/purchases/${purchase._id}/edit`)}
+                                className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Edit purchase"
+                              >
+                                <HiPencil className="w-5 h-5" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* View Button - Always visible */}
+                          <div className="w-10">
                             <button
-                              onClick={() => router.push(`/dashboard/purchases/${purchase._id}/edit`)}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Edit purchase"
+                              onClick={() => router.push(`/dashboard/purchases/${purchase._id}`)}
+                              className="p-2 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="View details"
                             >
-                              <HiPencil className="w-5 h-5" />
+                              <HiEye className="w-5 h-5" />
                             </button>
-                          )}
-                          <button
-                            onClick={() => router.push(`/dashboard/purchases/${purchase._id}`)}
-                            className="text-emerald-600 hover:text-emerald-900"
-                            title="View details"
-                          >
-                            <HiEye className="w-5 h-5" />
-                          </button>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -219,6 +288,146 @@ export default function PurchasesPage() {
           )}
         </div>
       </div>
+
+      {/* Quick Payment Modal */}
+      {showPaymentModal && selectedPurchase && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div
+              className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75 backdrop-blur-sm"
+              onClick={() => setShowPaymentModal(false)}
+            />
+
+            <div className="relative z-50 inline-block w-full max-w-lg p-0 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Record Payment</h3>
+                  <p className="text-sm text-green-100 mt-1">Purchase: {selectedPurchase.purchaseNumber}</p>
+                </div>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="text-white hover:text-gray-200"
+                >
+                  <HiX className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Pending Balance Banner */}
+              <div className="bg-red-50 border-l-4 border-red-500 p-4 mx-6 mt-4">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-sm">
+                    <span className="text-red-700 font-medium">Balance Pending: </span>
+                    <span className="text-red-900 font-bold text-lg">₹{selectedPurchase.balanceAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleQuickPayment} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Amount <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    step="0.01"
+                    min="0.01"
+                    max={selectedPurchase.balanceAmount}
+                    value={paymentFormData.amount}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-semibold"
+                    placeholder="0.00"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Max: ₹{selectedPurchase.balanceAmount.toLocaleString('en-IN')}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Method <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={paymentFormData.paymentMethod}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="CHEQUE">Cheque</option>
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="UPI">UPI</option>
+                    <option value="CREDIT_NOTE">Credit Note</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentFormData.paymentDate}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentDate: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Reference Number
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentFormData.referenceNumber}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, referenceNumber: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Cheque/Transaction number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={paymentFormData.notes}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Any additional notes..."
+                  />
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentModal(false)}
+                    className="px-6 py-2.5 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingPayment}
+                    className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submittingPayment ? 'Processing...' : 'Record Payment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

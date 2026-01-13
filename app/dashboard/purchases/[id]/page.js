@@ -7,6 +7,7 @@ import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageLoader from '@/components/PageLoader';
 import { purchasesAPI, shopAPI } from '@/utils/api';
+import { HiPlus, HiPencil, HiTrash, HiX } from 'react-icons/hi';
 
 export default function PurchaseDetail() {
   const { user, loading } = useAuth();
@@ -16,9 +17,32 @@ export default function PurchaseDetail() {
   const [purchase, setPurchase] = useState(null);
   const [shopSettings, setShopSettings] = useState(null);
   const [loadingPurchase, setLoadingPurchase] = useState(true);
+
+  // Payment modal states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [paymentMode, setPaymentMode] = useState('add'); // 'add' or 'edit'
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentFormData, setPaymentFormData] = useState({
+    amount: '',
+    paymentMethod: 'CASH',
+    paymentDate: new Date().toISOString().split('T')[0],
+    referenceNumber: '',
+    notes: ''
+  });
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+
+  // Delete confirmation states
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState(null);
+
+  // Info banner state
+  const [showInfoBanner, setShowInfoBanner] = useState(false);
+
+  // Initialize info banner state from localStorage
+  useEffect(() => {
+    const dismissed = localStorage.getItem('paymentInfoDismissed');
+    setShowInfoBanner(!dismissed);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -60,19 +84,79 @@ export default function PurchaseDetail() {
     window.print();
   };
 
-  const handleUpdatePayment = async (e) => {
+  const openAddPaymentModal = () => {
+    setPaymentMode('add');
+    setPaymentFormData({
+      amount: purchase.balanceAmount.toString(),
+      paymentMethod: 'CASH',
+      paymentDate: new Date().toISOString().split('T')[0],
+      referenceNumber: '',
+      notes: ''
+    });
+    setSelectedPayment(null);
+    setShowPaymentModal(true);
+  };
+
+  const openEditPaymentModal = (payment) => {
+    setPaymentMode('edit');
+    setSelectedPayment(payment);
+    setPaymentFormData({
+      amount: payment.amount.toString(),
+      paymentMethod: payment.paymentMethod,
+      paymentDate: new Date(payment.paymentDate).toISOString().split('T')[0],
+      referenceNumber: payment.referenceNumber || '',
+      notes: payment.notes || ''
+    });
+    setShowPaymentModal(true);
+  };
+
+  const handleSubmitPayment = async (e) => {
     e.preventDefault();
+    setSubmittingPayment(true);
+
     try {
-      await purchasesAPI.updatePayment(params.id, {
-        paidAmount: paymentAmount,
-        paymentMethod,
-      });
+      const paymentData = {
+        amount: parseFloat(paymentFormData.amount),
+        paymentMethod: paymentFormData.paymentMethod,
+        paymentDate: paymentFormData.paymentDate,
+        referenceNumber: paymentFormData.referenceNumber,
+        notes: paymentFormData.notes
+      };
+
+      if (paymentMode === 'add') {
+        await purchasesAPI.addPayment(params.id, paymentData);
+        toast.success('Payment added successfully!');
+      } else {
+        await purchasesAPI.editPayment(params.id, selectedPayment._id, paymentData);
+        toast.success('Payment updated successfully!');
+      }
+
       setShowPaymentModal(false);
       loadPurchase();
-      toast.success('Payment updated successfully!');
     } catch (error) {
+      console.error('Payment error:', error);
+      toast.error(error.message || 'An error occurred');
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
+  const handleDeletePayment = async () => {
+    try {
+      await purchasesAPI.deletePayment(params.id, deletingPaymentId);
+      toast.success('Payment deleted successfully!');
+      setShowDeleteConfirm(false);
+      setDeletingPaymentId(null);
+      loadPurchase();
+    } catch (error) {
+      console.error('Delete payment error:', error);
       toast.error(error.message || 'An error occurred');
     }
+  };
+
+  const openDeleteConfirmation = (paymentId) => {
+    setDeletingPaymentId(paymentId);
+    setShowDeleteConfirm(true);
   };
 
   if (loading || !user || loadingPurchase) {
@@ -83,9 +167,50 @@ export default function PurchaseDetail() {
     return null;
   }
 
+  const paymentHistory = purchase.payments || [];
+
+  const dismissInfoBanner = () => {
+    localStorage.setItem('paymentInfoDismissed', 'true');
+    setShowInfoBanner(false);
+  };
+
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Info Banner - First Time User Guide */}
+        {showInfoBanner && purchase.balanceAmount > 0 && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-5 no-print shadow-md">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-bold text-blue-900">💡 How to Track Payments?</h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p className="mb-2">This purchase has a pending balance. You can now track partial/multiple payments:</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2">
+                    <li><strong>Record Payment:</strong> Click the big "Record Payment" button below</li>
+                    <li><strong>Enter Details:</strong> Add amount, payment method, date & reference</li>
+                    <li><strong>Track History:</strong> View all payments in the Payment History table</li>
+                    <li><strong>Edit/Delete:</strong> Use the pencil/trash icons to manage payments</li>
+                  </ol>
+                  <p className="mt-2 font-semibold">→ Payments automatically update ledger & supplier balance!</p>
+                </div>
+              </div>
+              <button
+                onClick={dismissInfoBanner}
+                className="flex-shrink-0 ml-4 text-blue-400 hover:text-blue-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex justify-between items-center no-print">
           <button
@@ -98,27 +223,16 @@ export default function PurchaseDetail() {
             {!purchase.isReturned && (
               <button
                 onClick={() => router.push(`/dashboard/purchases/${params.id}/edit`)}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700"
-                title="Edit purchase details"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                title="Edit purchase items and quantities"
               >
-                Edit Purchase
+                ✏️ Edit Items
               </button>
             )}
             {purchase.isReturned && (
               <div className="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium cursor-not-allowed" title="Cannot edit purchases with returns">
-                Edit Purchase (Has Returns)
+                ✏️ Edit Items (Has Returns)
               </div>
-            )}
-            {purchase.balanceAmount > 0 && (
-              <button
-                onClick={() => {
-                  setPaymentAmount(purchase.balanceAmount);
-                  setShowPaymentModal(true);
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
-              >
-                Update Payment
-              </button>
             )}
             <button
               onClick={handleDownload}
@@ -129,6 +243,250 @@ export default function PurchaseDetail() {
             </button>
           </div>
         </div>
+
+        {/* Payment Status Banner - Prominent */}
+        <div className={`rounded-xl shadow-lg p-6 no-print ${
+          purchase.paymentStatus === 'PAID'
+            ? 'bg-gradient-to-r from-green-500 to-emerald-600'
+            : purchase.paymentStatus === 'PARTIAL'
+            ? 'bg-gradient-to-r from-yellow-500 to-orange-600'
+            : 'bg-gradient-to-r from-red-500 to-pink-600'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-white bg-opacity-20 backdrop-blur-sm rounded-full p-4">
+                {purchase.paymentStatus === 'PAID' ? (
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div className="text-white">
+                <h3 className="text-2xl font-bold mb-1">Payment Status: {purchase.paymentStatus}</h3>
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <span className="opacity-90">Grand Total: </span>
+                    <span className="font-bold">₹{purchase.grandTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div>
+                    <span className="opacity-90">Paid: </span>
+                    <span className="font-bold">₹{purchase.paidAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  {purchase.balanceAmount > 0 && (
+                    <div>
+                      <span className="opacity-90">Balance: </span>
+                      <span className="font-bold">₹{purchase.balanceAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {purchase.balanceAmount > 0 && (
+              <button
+                onClick={openAddPaymentModal}
+                className="bg-white text-gray-900 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 flex items-center gap-2 shadow-xl transform hover:scale-105 transition-all"
+              >
+                <HiPlus className="w-6 h-6" />
+                Record Payment
+              </button>
+            )}
+
+            {purchase.balanceAmount <= 0 && (
+              <div className="bg-white bg-opacity-20 backdrop-blur-sm text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Fully Paid
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Payment History Section - Premium Design */}
+        {paymentHistory.length > 0 && (
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg border-2 border-green-300 p-6 no-print">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  💳 Payment History
+                  <span className="px-3 py-1 bg-green-600 text-white text-sm rounded-full">
+                    {paymentHistory.length} {paymentHistory.length === 1 ? 'Payment' : 'Payments'}
+                  </span>
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">All payments recorded for this purchase. Click edit/delete icons to manage.</p>
+              </div>
+              {purchase.balanceAmount > 0 && (
+                <button
+                  onClick={openAddPaymentModal}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-bold hover:from-green-700 hover:to-emerald-700 flex items-center gap-2 shadow-lg transform hover:scale-105 transition-all"
+                >
+                  <HiPlus className="w-5 h-5" />
+                  Add More Payment
+                </button>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg overflow-hidden shadow-sm">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Method
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Reference
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Notes
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paymentHistory.map((payment, index) => (
+                    <tr key={payment._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(payment.paymentDate).toLocaleDateString('en-IN')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-bold text-green-600">
+                          ₹{payment.amount.toLocaleString('en-IN')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          {payment.paymentMethod}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {payment.referenceNumber || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                        {payment.notes || '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => openEditPaymentModal(payment)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Edit Payment"
+                          >
+                            <HiPencil className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteConfirmation(payment._id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete Payment"
+                          >
+                            <HiTrash className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Summary Footer */}
+            <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-xs text-gray-500 uppercase">Total Payments</div>
+                  <div className="text-xl font-bold text-gray-900">{paymentHistory.length}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 uppercase">Paid Amount</div>
+                  <div className="text-xl font-bold text-green-600">
+                    ₹{purchase.paidAmount.toLocaleString('en-IN')}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 uppercase">Balance Due</div>
+                  <div className={`text-xl font-bold ${purchase.balanceAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    ₹{purchase.balanceAmount.toLocaleString('en-IN')}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* No Payments Yet - Enhanced Call to Action */}
+        {paymentHistory.length === 0 && purchase.balanceAmount > 0 && (
+          <div className="bg-white rounded-xl shadow-2xl border-2 border-dashed border-orange-300 p-10 text-center no-print relative overflow-hidden">
+            {/* Decorative background */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-full -mr-32 -mt-32 opacity-50"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-green-100 to-emerald-100 rounded-full -ml-24 -mb-24 opacity-50"></div>
+
+            <div className="relative z-10 max-w-2xl mx-auto">
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center shadow-lg">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+
+              <h3 className="text-3xl font-bold text-gray-900 mb-3">Track Your Payments Here! 💰</h3>
+
+              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6 inline-block">
+                <p className="text-red-700 font-semibold text-lg">
+                  Balance Pending: ₹{purchase.balanceAmount.toLocaleString('en-IN')}
+                </p>
+              </div>
+
+              <p className="text-gray-600 mb-8 text-lg leading-relaxed">
+                Record partial or full payments as you receive them from suppliers.
+                <br/>
+                Each payment is tracked separately with date, method, and reference number.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Multiple Payments
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Payment History
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Edit & Delete
+                </div>
+              </div>
+
+              <button
+                onClick={openAddPaymentModal}
+                className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 flex items-center gap-3 mx-auto shadow-2xl transform hover:scale-105 transition-all"
+              >
+                <HiPlus className="w-6 h-6" />
+                Click Here to Record Payment
+                <svg className="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Purchase Document */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 invoice-print">
@@ -376,73 +734,167 @@ export default function PurchaseDetail() {
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal - Premium Design */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto no-print">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div
-              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+              className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75 backdrop-blur-sm"
               onClick={() => setShowPaymentModal(false)}
             />
 
-            <div className="relative z-50 inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                Update Payment
-              </h3>
+            <div className="relative z-50 inline-block w-full max-w-lg p-0 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">
+                  {paymentMode === 'add' ? 'Add Payment' : 'Edit Payment'}
+                </h3>
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="text-white hover:text-gray-200"
+                >
+                  <HiX className="w-6 h-6" />
+                </button>
+              </div>
 
-              <form onSubmit={handleUpdatePayment} className="space-y-4">
+              {/* Modal Body */}
+              <form onSubmit={handleSubmitPayment} className="p-6 space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Amount *
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Amount <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
                     required
                     step="0.01"
-                    min="0"
-                    max={purchase.balanceAmount}
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    min="0.01"
+                    max={paymentMode === 'add' ? purchase.balanceAmount : purchase.balanceAmount + (selectedPayment?.amount || 0)}
+                    value={paymentFormData.amount}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-lg font-semibold"
+                    placeholder="0.00"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Balance Due: ₹{purchase.balanceAmount.toLocaleString('en-IN')}
+                    Max: ₹{(paymentMode === 'add' ? purchase.balanceAmount : purchase.balanceAmount + (selectedPayment?.amount || 0)).toLocaleString('en-IN')}
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Method *
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Method <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    value={paymentFormData.paymentMethod}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   >
                     <option value="CASH">Cash</option>
                     <option value="CHEQUE">Cheque</option>
                     <option value="BANK_TRANSFER">Bank Transfer</option>
-                    <option value="CREDIT">Credit</option>
+                    <option value="UPI">UPI</option>
+                    <option value="CREDIT_NOTE">Credit Note</option>
+                    <option value="OTHER">Other</option>
                   </select>
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentFormData.paymentDate}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentDate: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Reference Number
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentFormData.referenceNumber}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, referenceNumber: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Cheque/Transaction number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={paymentFormData.notes}
+                    onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Any additional notes..."
+                  />
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 pt-4 border-t">
                   <button
                     type="button"
                     onClick={() => setShowPaymentModal(false)}
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="px-6 py-2.5 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    disabled={submittingPayment}
+                    className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Update Payment
+                    {submittingPayment ? 'Processing...' : paymentMode === 'add' ? 'Add Payment' : 'Update Payment'}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 overflow-y-auto no-print">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div
+              className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75 backdrop-blur-sm"
+              onClick={() => setShowDeleteConfirm(false)}
+            />
+
+            <div className="relative z-50 inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <HiTrash className="w-6 h-6 text-red-600" />
+              </div>
+
+              <h3 className="text-lg font-bold text-center text-gray-900 mb-2">
+                Delete Payment?
+              </h3>
+              <p className="text-sm text-center text-gray-500 mb-6">
+                Are you sure you want to delete this payment? This action cannot be undone and will update the purchase balance.
+              </p>
+
+              <div className="flex justify-center space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-6 py-2.5 text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeletePayment}
+                  className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                >
+                  Delete Payment
+                </button>
+              </div>
             </div>
           </div>
         </div>
