@@ -7,6 +7,7 @@ import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageLoader from '@/components/PageLoader';
 import { invoicesAPI, shopAPI } from '@/utils/api';
+import { HiPlus, HiPencil, HiTrash, HiX, HiCurrencyRupee } from 'react-icons/hi';
 
 export default function InvoiceDetail() {
   const { user, loading } = useAuth();
@@ -16,10 +17,19 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState(null);
   const [shopSettings, setShopSettings] = useState(null);
   const [loadingInvoice, setLoadingInvoice] = useState(true);
+
+  // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
-  const [paymentDetails, setPaymentDetails] = useState('');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingPaymentId, setDeletingPaymentId] = useState(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -53,32 +63,80 @@ export default function InvoiceDetail() {
   };
 
   const handleDownload = () => {
-    // Use the browser's print dialog which has "Save as PDF" option
-    // This is more reliable than html2pdf.js and works in all browsers
-
-    // Show helpful tip for first-time users
     const hasSeenTip = localStorage.getItem('pdfPrintTipSeen');
     if (!hasSeenTip) {
       toast.info('Tip: Turn OFF "Headers and footers" in print dialog for clean PDF', 6000);
       localStorage.setItem('pdfPrintTipSeen', 'true');
     }
-
     window.print();
   };
 
-  const handleUpdatePayment = async (e) => {
+  // Open modal to add new payment
+  const openAddPaymentModal = () => {
+    setEditingPaymentId(null);
+    setPaymentAmount(invoice?.balanceAmount || 0);
+    setPaymentMethod('CASH');
+    setPaymentDate(new Date().toISOString().split('T')[0]);
+    setReferenceNumber('');
+    setPaymentNotes('');
+    setShowPaymentModal(true);
+  };
+
+  // Open modal to edit existing payment
+  const openEditPaymentModal = (payment) => {
+    setEditingPaymentId(payment._id);
+    setPaymentAmount(payment.amount);
+    setPaymentMethod(payment.paymentMethod);
+    setPaymentDate(new Date(payment.paymentDate).toISOString().split('T')[0]);
+    setReferenceNumber(payment.referenceNumber || '');
+    setPaymentNotes(payment.notes || '');
+    setShowPaymentModal(true);
+  };
+
+  // Handle add/edit payment submission
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      await invoicesAPI.updatePayment(params.id, {
-        paidAmount: paymentAmount,
+      const paymentData = {
+        amount: paymentAmount,
         paymentMethod,
-        paymentDetails,
-      });
+        paymentDate,
+        referenceNumber,
+        notes: paymentNotes,
+      };
+
+      if (editingPaymentId) {
+        await invoicesAPI.editPayment(params.id, editingPaymentId, paymentData);
+        toast.success('Payment updated successfully!');
+      } else {
+        await invoicesAPI.addPayment(params.id, paymentData);
+        toast.success('Payment recorded successfully!');
+      }
+
       setShowPaymentModal(false);
       loadInvoice();
-      toast.success('Payment updated successfully!');
     } catch (error) {
       toast.error(error.message || 'An error occurred');
+    }
+  };
+
+  // Open delete confirmation modal
+  const openDeleteModal = (paymentId) => {
+    setDeletingPaymentId(paymentId);
+    setShowDeleteModal(true);
+  };
+
+  // Handle delete payment
+  const handleDeletePayment = async () => {
+    try {
+      await invoicesAPI.deletePayment(params.id, deletingPaymentId);
+      toast.success('Payment deleted successfully!');
+      setShowDeleteModal(false);
+      setDeletingPaymentId(null);
+      loadInvoice();
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete payment');
     }
   };
 
@@ -92,36 +150,131 @@ export default function InvoiceDetail() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Action Buttons */}
         <div className="flex justify-between items-center no-print">
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             ← Back
           </button>
-          <div className="flex gap-3">
+          <button
+            onClick={handleDownload}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+            title="Save as PDF using your browser's print dialog"
+          >
+            📥 Save as PDF
+          </button>
+        </div>
+
+        {/* Payment Status Banner - Clean & Subtle */}
+        <div className={`rounded-xl shadow-sm border-2 p-6 no-print transition-all ${
+          invoice.paymentStatus === 'PAID'
+            ? 'bg-green-50 border-green-200'
+            : invoice.paymentStatus === 'PARTIAL'
+            ? 'bg-amber-50 border-amber-200'
+            : 'bg-rose-50 border-rose-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 className={`text-xl font-semibold ${
+                  invoice.paymentStatus === 'PAID'
+                    ? 'text-green-800'
+                    : invoice.paymentStatus === 'PARTIAL'
+                    ? 'text-amber-800'
+                    : 'text-rose-800'
+                }`}>
+                  {invoice.paymentStatus === 'PAID' ? '✓ Fully Paid' :
+                   invoice.paymentStatus === 'PARTIAL' ? '⚠ Partially Paid' :
+                   '○ Unpaid'}
+                </h3>
+              </div>
+              <div className="flex gap-6 mt-2 text-sm text-gray-700">
+                <div>Total: <span className="font-semibold">₹{invoice.grandTotal.toLocaleString('en-IN')}</span></div>
+                <div>Paid: <span className="font-semibold text-green-700">₹{invoice.paidAmount.toLocaleString('en-IN')}</span></div>
+                {invoice.balanceAmount > 0 && (
+                  <div>Balance: <span className="font-semibold text-rose-700">₹{invoice.balanceAmount.toLocaleString('en-IN')}</span></div>
+                )}
+              </div>
+            </div>
             {invoice.balanceAmount > 0 && (
               <button
-                onClick={() => {
-                  setPaymentAmount(invoice.balanceAmount);
-                  setShowPaymentModal(true);
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+                onClick={openAddPaymentModal}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all shadow-sm"
               >
-                Update Payment
+                <HiCurrencyRupee className="w-5 h-5" />
+                Record Payment
               </button>
             )}
-            <button
-              onClick={handleDownload}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700"
-              title="Save as PDF using your browser's print dialog"
-            >
-              📥 Save as PDF
-            </button>
           </div>
         </div>
+
+        {/* Payment History - Clean & Professional */}
+        {invoice.payments && invoice.payments.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden no-print">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+              <h3 className="text-lg font-semibold text-gray-900">Payment History</h3>
+              <p className="text-sm text-gray-600 mt-0.5">All payments received for this invoice</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Method</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reference</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Notes</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {invoice.payments.map((payment, index) => (
+                    <tr key={payment._id || index} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3.5 text-sm text-gray-900">
+                        {new Date(payment.paymentDate).toLocaleDateString('en-IN')}
+                      </td>
+                      <td className="px-6 py-3.5 text-sm font-semibold text-green-700">
+                        ₹{payment.amount.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-6 py-3.5 text-sm text-gray-700">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {payment.paymentMethod}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3.5 text-sm text-gray-600">
+                        {payment.referenceNumber || '-'}
+                      </td>
+                      <td className="px-6 py-3.5 text-sm text-gray-600">
+                        {payment.notes || '-'}
+                      </td>
+                      <td className="px-6 py-3.5 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => openEditPaymentModal(payment)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit payment"
+                          >
+                            <HiPencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(payment._id)}
+                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            title="Delete payment"
+                          >
+                            <HiTrash className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Invoice */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 invoice-print">
@@ -304,8 +457,8 @@ export default function InvoiceDetail() {
 
           {/* Payment Info */}
           <div className="mt-6 pt-6 border-t border-gray-300">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
+            <div className="text-sm">
+              <div className="mb-3">
                 <span className="text-gray-600">Payment Status: </span>
                 <span
                   className={`font-semibold ${
@@ -319,18 +472,32 @@ export default function InvoiceDetail() {
                   {invoice.paymentStatus}
                 </span>
               </div>
-              <div>
-                <span className="text-gray-600">Payment Method: </span>
-                <span className="font-semibold text-black">{invoice.paymentMethod}</span>
-              </div>
+
+              {/* Payment History */}
+              {invoice.payments && invoice.payments.length > 0 ? (
+                <div>
+                  <span className="text-gray-600">Payment Details: </span>
+                  <span className="text-black">
+                    {invoice.payments.map((payment, index) => (
+                      <span key={index}>
+                        {index > 0 && ', '}
+                        ₹{payment.amount.toLocaleString('en-IN')} via {payment.paymentMethod}
+                        {' '}on {new Date(payment.paymentDate).toLocaleDateString('en-IN')}
+                        {payment.referenceNumber && ` (Ref: ${payment.referenceNumber})`}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-gray-600">Payment Method: </span>
+                  <span className="font-semibold text-black">{invoice.paymentMethod}</span>
+                </div>
+              )}
             </div>
-            {invoice.paymentDetails && (
-              <p className="text-sm text-gray-600 mt-2">
-                Payment Details: {invoice.paymentDetails}
-              </p>
-            )}
+
             {invoice.notes && (
-              <p className="text-sm text-gray-600 mt-2">Notes: {invoice.notes}</p>
+              <p className="text-sm text-gray-600 mt-3">Notes: {invoice.notes}</p>
             )}
           </div>
 
@@ -344,87 +511,177 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Payment Modal - Clean & Professional */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto no-print">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             <div
-              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+              className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity"
               onClick={() => setShowPaymentModal(false)}
             />
 
-            <div className="relative z-50 inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
-              <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                Update Payment
-              </h3>
+            <div className="relative z-50 inline-block w-full max-w-lg p-0 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+              {/* Modal Header */}
+              <div className="px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">
+                    {editingPaymentId ? 'Edit Payment' : 'Record Payment'}
+                  </h3>
+                  <button
+                    onClick={() => setShowPaymentModal(false)}
+                    className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    <HiX className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-green-100 mt-1">
+                  {editingPaymentId ? 'Update payment details' : 'Add a new payment for this invoice'}
+                </p>
+              </div>
 
-              <form onSubmit={handleUpdatePayment} className="space-y-4">
+              {/* Modal Body */}
+              <form onSubmit={handlePaymentSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Payment Amount *
                   </label>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0"
-                    max={invoice.balanceAmount}
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Balance Due: ₹{invoice.balanceAmount.toLocaleString('en-IN')}
-                  </p>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0.01"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(Number(e.target.value))}
+                      className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {!editingPaymentId && invoice.balanceAmount > 0 && (
+                    <p className="text-xs text-gray-600 mt-1.5">
+                      Balance Due: ₹{invoice.balanceAmount.toLocaleString('en-IN')}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Payment Method *
                   </label>
                   <select
                     required
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   >
                     <option value="CASH">Cash</option>
                     <option value="UPI">UPI</option>
                     <option value="CARD">Card</option>
                     <option value="CHEQUE">Cheque</option>
                     <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="CREDIT_NOTE">Credit Note</option>
+                    <option value="OTHER">Other</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Details
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Payment Date *
                   </label>
                   <input
-                    type="text"
-                    value={paymentDetails}
-                    onChange={(e) => setPaymentDetails(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., UPI Ref: 123456789"
+                    type="date"
+                    required
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   />
                 </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Reference Number
+                  </label>
+                  <input
+                    type="text"
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    placeholder="Transaction ID, Cheque No., etc."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    rows={2}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none"
+                    placeholder="Additional notes (optional)"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={() => setShowPaymentModal(false)}
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium shadow-sm"
                   >
-                    Update Payment
+                    {editingPaymentId ? 'Update Payment' : 'Record Payment'}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto no-print">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowDeleteModal(false)}
+            />
+
+            <div className="relative z-50 inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-shrink-0 w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
+                  <HiTrash className="w-5 h-5 text-rose-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Delete Payment
+                </h3>
+              </div>
+
+              <p className="text-sm text-gray-600 mb-6">
+                Are you sure you want to delete this payment? This will update the invoice balance and cannot be undone.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeletePayment}
+                  className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-medium"
+                >
+                  Delete Payment
+                </button>
+              </div>
             </div>
           </div>
         </div>

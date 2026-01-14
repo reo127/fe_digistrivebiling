@@ -699,8 +699,8 @@ export default function PurchaseDetail() {
 
           {/* Payment Info */}
           <div className="mt-6 pt-6 border-t border-gray-300">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
+            <div className="text-sm">
+              <div className="mb-3">
                 <span className="text-gray-600">Payment Status: </span>
                 <span
                   className={`font-semibold ${
@@ -714,13 +714,32 @@ export default function PurchaseDetail() {
                   {purchase.paymentStatus}
                 </span>
               </div>
-              <div>
-                <span className="text-gray-600">Payment Method: </span>
-                <span className="font-semibold text-black">{purchase.paymentMethod}</span>
-              </div>
+
+              {/* Payment History */}
+              {purchase.payments && purchase.payments.length > 0 ? (
+                <div>
+                  <span className="text-gray-600">Payment Details: </span>
+                  <span className="text-black">
+                    {purchase.payments.map((payment, index) => (
+                      <span key={index}>
+                        {index > 0 && ', '}
+                        ₹{payment.amount.toLocaleString('en-IN')} via {payment.paymentMethod}
+                        {' '}on {new Date(payment.paymentDate).toLocaleDateString('en-IN')}
+                        {payment.referenceNumber && ` (Ref: ${payment.referenceNumber})`}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-gray-600">Payment Method: </span>
+                  <span className="font-semibold text-black">{purchase.paymentMethod}</span>
+                </div>
+              )}
             </div>
+
             {purchase.notes && (
-              <p className="text-sm text-gray-600 mt-2">Notes: {purchase.notes}</p>
+              <p className="text-sm text-gray-600 mt-3">Notes: {purchase.notes}</p>
             )}
           </div>
 

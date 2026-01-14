@@ -124,6 +124,18 @@ export const invoicesAPI = {
   delete: (id) => apiCall(`/invoices/${id}`, {
     method: 'DELETE',
   }),
+  // Multiple payments
+  addPayment: (id, data) => apiCall(`/invoices/${id}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  editPayment: (id, paymentId, data) => apiCall(`/invoices/${id}/payments/${paymentId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  deletePayment: (id, paymentId) => apiCall(`/invoices/${id}/payments/${paymentId}`, {
+    method: 'DELETE',
+  }),
 };
 
 // Suppliers API
