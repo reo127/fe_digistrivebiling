@@ -91,6 +91,18 @@ export default function SalesReturnDetail() {
                     <div className="border-b-2 border-gray-800 pb-6 mb-6">
                         <div className="flex justify-between items-start">
                             <div>
+                                {/* Logo */}
+                                {shopSettings?.logo && (
+                                    <div className="mb-3">
+                                        <img
+                                            src={shopSettings.logo}
+                                            alt={shopSettings.shopName || 'Shop Logo'}
+                                            className="h-16 object-contain"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Shop Details */}
                                 <h1 className="text-3xl font-bold text-gray-900">
                                     {shopSettings?.shopName || 'Medical Store'}
                                 </h1>
@@ -106,6 +118,7 @@ export default function SalesReturnDetail() {
                                     </div>
                                 )}
                             </div>
+
                             <div className="text-right">
                                 <div className="inline-block px-4 py-2 bg-red-600 text-white rounded-lg">
                                     <p className="text-sm font-medium">CREDIT NOTE</p>
