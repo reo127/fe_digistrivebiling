@@ -514,6 +514,16 @@ export default function InvoiceDetail() {
             )}
           </div>
 
+          {/* Terms & Conditions */}
+          {shopSettings?.termsAndConditions && (
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Terms & Conditions:</h3>
+              <p className="text-xs text-gray-600 whitespace-pre-line">
+                {shopSettings.termsAndConditions}
+              </p>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-300 text-center">
             <p className="text-sm text-gray-600">Thank you for your business!</p>

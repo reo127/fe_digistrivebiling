@@ -39,6 +39,7 @@ export default function Settings() {
     gstin: '',
     defaultTaxType: 'CGST_SGST',
     logo: '',
+    termsAndConditions: '',
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -70,6 +71,7 @@ export default function Settings() {
           gstin: data.gstin || '',
           defaultTaxType: data.defaultTaxType || 'CGST_SGST',
           logo: data.logo || '',
+          termsAndConditions: data.termsAndConditions || '',
         });
         // Set logo preview if exists
         if (data.logo) {
@@ -631,6 +633,21 @@ export default function Settings() {
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   This will be the default tax type for new invoices
+                </p>
+              </div>
+
+              <div className="sm:col-span-2 space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Terms & Conditions</label>
+                <textarea
+                  name="termsAndConditions"
+                  value={formData.termsAndConditions}
+                  onChange={handleChange}
+                  rows={5}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all resize-none"
+                  placeholder="Enter your terms and conditions here... (e.g., Payment terms, return policy, etc.)"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  These terms will appear at the bottom of all invoices and documents
                 </p>
               </div>
             </div>
