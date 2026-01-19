@@ -151,43 +151,39 @@ export default function InventoryPage() {
             <nav className="flex -mb-px">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 ${
-                  activeTab === 'all'
+                className={`px-6 py-4 text-sm font-medium border-b-2 ${activeTab === 'all'
                     ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 All Stock
               </button>
               <button
                 onClick={() => setActiveTab('low-stock')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                  activeTab === 'low-stock'
+                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${activeTab === 'low-stock'
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <HiExclamationCircle className="w-4 h-4" />
                 Low Stock ({lowStockItems.length})
               </button>
               <button
                 onClick={() => setActiveTab('near-expiry')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                  activeTab === 'near-expiry'
+                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${activeTab === 'near-expiry'
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <HiClock className="w-4 h-4" />
                 Near Expiry ({nearExpiryBatches.length})
               </button>
               <button
                 onClick={() => setActiveTab('expired')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                  activeTab === 'expired'
+                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${activeTab === 'expired'
                     ? 'border-red-500 text-red-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <HiBan className="w-4 h-4" />
                 Expired ({expiredBatches.length})
@@ -204,7 +200,7 @@ export default function InventoryPage() {
                 placeholder="Search by product name or batch number..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-gray-900"
               />
             </div>
           </div>

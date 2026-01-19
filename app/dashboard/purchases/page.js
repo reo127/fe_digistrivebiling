@@ -196,134 +196,134 @@ export default function PurchasesPage() {
               <TableSkeleton rows={8} columns={8} />
             </div>
           ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Purchase #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Supplier
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Bill #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Items
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredPurchases.length === 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
-                      No purchases found. Add your first purchase to get started.
-                    </td>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Purchase #
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Supplier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Bill #
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Items
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Payment Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ) : (
-                  filteredPurchases.map((purchase) => (
-                    <tr key={purchase._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{purchase.purchaseNumber}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(purchase.purchaseDate).toLocaleDateString('en-IN')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{purchase.supplier?.name}</div>
-                        <div className="text-xs text-gray-500">{purchase.supplier?.gstin}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {purchase.supplierInvoiceNo || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {purchase.items?.length} items
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          ₹{purchase.grandTotal?.toLocaleString('en-IN')}
-                        </div>
-                        {purchase.balanceAmount > 0 && (
-                          <div className="text-xs text-red-600 font-semibold">
-                            Due: ₹{purchase.balanceAmount?.toLocaleString('en-IN')}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(purchase.paymentStatus)}`}>
-                          {purchase.paymentStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="inline-flex items-center gap-2">
-                          {/* Record Payment Button - Fixed width for alignment */}
-                          <div className="w-10">
-                            {purchase.balanceAmount > 0 && (
-                              <button
-                                onClick={() => openQuickPaymentModal(purchase)}
-                                className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                                title="Record Payment"
-                              >
-                                <HiCurrencyRupee className="w-5 h-5" />
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Edit Button - Fixed width for alignment */}
-                          <div className="w-10">
-                            {!purchase.isReturned && (
-                              <button
-                                onClick={() => router.push(`/dashboard/purchases/${purchase._id}/edit`)}
-                                className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Edit purchase"
-                              >
-                                <HiPencil className="w-5 h-5" />
-                              </button>
-                            )}
-                          </div>
-
-                          {/* View Button - Always visible */}
-                          <div className="w-10">
-                            <button
-                              onClick={() => router.push(`/dashboard/purchases/${purchase._id}`)}
-                              className="p-2 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
-                              title="View details"
-                            >
-                              <HiEye className="w-5 h-5" />
-                            </button>
-                          </div>
-
-                          {/* Delete Button - Always visible */}
-                          <div className="w-10">
-                            <button
-                              onClick={() => openDeleteModal(purchase)}
-                              className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Delete purchase"
-                            >
-                              <HiTrash className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredPurchases.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                        No purchases found. Add your first purchase to get started.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredPurchases.map((purchase) => (
+                      <tr key={purchase._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">{purchase.purchaseNumber}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(purchase.purchaseDate).toLocaleDateString('en-IN')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{purchase.supplier?.name}</div>
+                          <div className="text-xs text-gray-500">{purchase.supplier?.gstin}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {purchase.supplierInvoiceNo || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {purchase.items?.length} items
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            ₹{purchase.grandTotal?.toLocaleString('en-IN')}
+                          </div>
+                          {purchase.balanceAmount > 0 && (
+                            <div className="text-xs text-red-600 font-semibold">
+                              Due: ₹{purchase.balanceAmount?.toLocaleString('en-IN')}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(purchase.paymentStatus)}`}>
+                            {purchase.paymentStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="inline-flex items-center gap-2">
+                            {/* Record Payment Button - Fixed width for alignment */}
+                            <div className="w-10">
+                              {purchase.balanceAmount > 0 && (
+                                <button
+                                  onClick={() => openQuickPaymentModal(purchase)}
+                                  className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                  title="Record Payment"
+                                >
+                                  <HiCurrencyRupee className="w-5 h-5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Edit Button - Fixed width for alignment */}
+                            <div className="w-10">
+                              {!purchase.isReturned && (
+                                <button
+                                  onClick={() => router.push(`/dashboard/purchases/${purchase._id}/edit`)}
+                                  className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Edit purchase"
+                                >
+                                  <HiPencil className="w-5 h-5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* View Button - Always visible */}
+                            <div className="w-10">
+                              <button
+                                onClick={() => router.push(`/dashboard/purchases/${purchase._id}`)}
+                                className="p-2 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-colors"
+                                title="View details"
+                              >
+                                <HiEye className="w-5 h-5" />
+                              </button>
+                            </div>
+
+                            {/* Delete Button - Always visible */}
+                            <div className="w-10">
+                              <button
+                                onClick={() => openDeleteModal(purchase)}
+                                className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete purchase"
+                              >
+                                <HiTrash className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -451,7 +451,7 @@ export default function PurchasesPage() {
               {/* Modal Body */}
               <form onSubmit={handleQuickPayment} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Payment Amount <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -471,7 +471,7 @@ export default function PurchasesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Payment Method <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -490,7 +490,7 @@ export default function PurchasesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Payment Date <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -503,7 +503,7 @@ export default function PurchasesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Reference Number
                   </label>
                   <input
@@ -516,7 +516,7 @@ export default function PurchasesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Notes
                   </label>
                   <textarea
