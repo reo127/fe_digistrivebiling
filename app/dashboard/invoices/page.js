@@ -179,6 +179,7 @@ export default function Invoices() {
                     <tr key={invoice._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {invoice.invoiceNumber}
+                        {/* {invoice._id} */}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
