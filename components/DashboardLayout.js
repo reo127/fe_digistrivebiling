@@ -88,7 +88,7 @@ export default function DashboardLayout({ children }) {
         className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ease-in-out ${collapsed ? 'lg:w-20' : 'lg:w-72'
           }`}
       >
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-xl">
+        <div className="flex flex-col h-full bg-white border-r border-gray-200 shadow-xl">
           {/* Logo & Toggle */}
           <div className="flex items-center justify-between h-16 px-6 bg-white relative overflow-hidden border-b border-gray-200">
             {!collapsed && settingsLoaded && (
@@ -147,7 +147,7 @@ export default function DashboardLayout({ children }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto scrollbar-thin">
             {navigation.map((item) => {
               const exactMatch = navigation.find(nav => nav.href === pathname);
               const isActive = exactMatch
@@ -250,7 +250,7 @@ export default function DashboardLayout({ children }) {
                 <HiX className="w-6 h-6" />
               </button>
             </div>
-            <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+            <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto scrollbar-thin">
               {navigation.map((item) => {
                 const exactMatch = navigation.find(nav => nav.href === pathname);
                 const isActive = exactMatch
