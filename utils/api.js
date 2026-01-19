@@ -183,6 +183,9 @@ export const purchasesAPI = {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
+  delete: (id) => apiCall(`/purchases/${id}`, {
+    method: 'DELETE',
+  }),
   // Multiple payments
   addPayment: (id, data) => apiCall(`/purchases/${id}/payments`, {
     method: 'POST',
