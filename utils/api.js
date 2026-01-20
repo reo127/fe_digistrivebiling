@@ -69,6 +69,11 @@ export const productsAPI = {
     const query = new URLSearchParams(params).toString();
     return apiCall(`/products?${query}`);
   },
+  getAllWithBatches: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/products/with-batches?${query}`);
+  },
+  getBatchesForInvoice: () => apiCall('/products/batches-for-invoice'),
   getOne: (id) => apiCall(`/products/${id}`),
   create: (data) => apiCall('/products', {
     method: 'POST',

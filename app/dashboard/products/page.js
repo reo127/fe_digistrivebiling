@@ -51,7 +51,11 @@ export default function Products() {
 
   const loadProducts = async () => {
     try {
-      const data = await productsAPI.getAll({ search: searchTerm });
+      const params = {};
+      if (searchTerm && searchTerm.trim() !== '') {
+        params.search = searchTerm;
+      }
+      const data = await productsAPI.getAllWithBatches(params);
       setProducts(data);
     } catch (error) {
       console.error('Error loading products:', error);
@@ -273,59 +277,99 @@ export default function Products() {
                     </td>
                   </tr>
                 ) : (
-                  products.map((product) => (
-                    <tr key={product._id} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{product.name}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        <div className="space-y-1">
-                          <div className="font-medium">{product.batchNo || '-'}</div>
-                          {product.expiryDate && (
-                            <div className="text-xs text-gray-500">
-                              Exp: {new Date(product.expiryDate).toLocaleDateString('en-IN')}
+                  products.map((product) => {
+                    // Show batch-wise rows if batches exist
+                    if (product.batches && product.batches.length > 0) {
+                      return product.batches.map((batch, batchIdx) => (
+                        <tr key={`${product._id}-${batch._id}`} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">{product.name}</div>
+                              {product.batches.length > 1 && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Batch {batchIdx + 1} of {product.batches.length}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                            product.stockQuantity === 0
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}
-                        >
-                          {product.stockQuantity} {product.unit}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{product.mrp.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{product.sellingPrice.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700">
-                          {product.gstRate}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                        >
-                          <HiPencil className="w-4 h-4 mr-1" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product._id)}
-                          className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
-                        >
-                          <HiTrash className="w-4 h-4 mr-1" />
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            <div className="space-y-1">
+                              <div className="font-medium">{batch.batchNo || 'N/A'}</div>
+                              {batch.expiryDate && (
+                                <div className="text-xs text-gray-500">
+                                  Exp: {new Date(batch.expiryDate).toLocaleDateString('en-IN')}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                batch.quantity === 0
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-green-100 text-green-700'
+                              }`}
+                            >
+                              {batch.quantity} {product.unit}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{batch.mrp?.toLocaleString('en-IN') || '-'}</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{batch.sellingPrice?.toLocaleString('en-IN') || '-'}</td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700">
+                              {batch.gstRate || product.gstRate}%
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
+                            <button
+                              onClick={() => handleEdit(product)}
+                              className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                            >
+                              <HiPencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product._id)}
+                              className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                            >
+                              <HiTrash className="w-4 h-4 mr-1" />
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ));
+                    } else {
+                      // Product with no batches - show as before
+                      return (
+                        <tr key={product._id} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">{product.name}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500" colSpan="5">
+                            No stock available
+                          </td>
+                          <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
+                            <button
+                              onClick={() => handleEdit(product)}
+                              className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                            >
+                              <HiPencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product._id)}
+                              className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                            >
+                              <HiTrash className="w-4 h-4 mr-1" />
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    }
+                  })
                 )}
               </tbody>
             </table>
