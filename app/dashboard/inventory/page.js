@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageLoader from '@/components/PageLoader';
-import { inventoryAPI, productsAPI } from '@/utils/api';
+import { inventoryAPI } from '@/utils/api';
 import { HiSearch, HiExclamationCircle, HiClock, HiBan } from 'react-icons/hi';
 
 export default function InventoryPage() {
@@ -22,65 +22,66 @@ export default function InventoryPage() {
 
   const loadData = async () => {
     try {
-      const [statsData, lowStock, nearExpiry, expired] = await Promise.all([
+      const [statsData, lowStock, nearExpiry, expired, allBatchesData] = await Promise.all([
         inventoryAPI.getStats(),
         inventoryAPI.getLowStock(),
         inventoryAPI.getNearExpiry({ months: 3 }),
-        inventoryAPI.getExpired()
+        inventoryAPI.getExpired(),
+        inventoryAPI.getAllBatches() // ✅ Single API call instead of N calls!
       ]);
 
       setStats(statsData);
       setLowStockItems(lowStock);
       setNearExpiryBatches(nearExpiry);
       setExpiredBatches(expired);
-
-      // Combine all batches for "All Stock" tab
-      const allProducts = await productsAPI.getAll();
-      const batchesWithProducts = [];
-
-      for (const product of allProducts) {
-        const batches = await inventoryAPI.getBatchesByProduct(product._id);
-        batches.forEach(batch => {
-          batchesWithProducts.push({
-            ...batch,
-            productInfo: product
-          });
-        });
-      }
-      setAllBatches(batchesWithProducts);
+      setAllBatches(allBatchesData); // Batches already include product info from backend
     } catch (error) {
       console.error('Error loading inventory:', error);
-      toast.error(error.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const getTabData = () => {
+  // Memoize filtered data to prevent unnecessary recalculations
+  const tabData = useMemo(() => {
+    let data = [];
+
     switch (activeTab) {
       case 'all':
-        return allBatches.filter(batch =>
-          batch.productInfo?.name?.toLowerCase().includes(search.toLowerCase()) ||
-          batch.batchNo?.toLowerCase().includes(search.toLowerCase())
-        );
+        data = allBatches;
+        break;
       case 'low-stock':
-        return lowStockItems.filter(item =>
-          item.name?.toLowerCase().includes(search.toLowerCase())
-        );
+        data = lowStockItems;
+        break;
       case 'near-expiry':
-        return nearExpiryBatches.filter(batch =>
-          batch.product?.name?.toLowerCase().includes(search.toLowerCase()) ||
-          batch.batchNo?.toLowerCase().includes(search.toLowerCase())
-        );
+        data = nearExpiryBatches;
+        break;
       case 'expired':
-        return expiredBatches.filter(batch =>
-          batch.product?.name?.toLowerCase().includes(search.toLowerCase()) ||
-          batch.batchNo?.toLowerCase().includes(search.toLowerCase())
-        );
+        data = expiredBatches;
+        break;
       default:
-        return [];
+        data = [];
     }
-  };
+
+    // Apply search filter
+    if (!search || search.trim() === '') {
+      return data;
+    }
+
+    const searchLower = search.toLowerCase();
+
+    if (activeTab === 'low-stock') {
+      return data.filter(item =>
+        item.name?.toLowerCase().includes(searchLower)
+      );
+    } else {
+      return data.filter(item =>
+        item.productInfo?.name?.toLowerCase().includes(searchLower) ||
+        item.product?.name?.toLowerCase().includes(searchLower) ||
+        item.batchNo?.toLowerCase().includes(searchLower)
+      );
+    }
+  }, [activeTab, search, allBatches, lowStockItems, nearExpiryBatches, expiredBatches]);
 
   const getExpiryStatus = (expiryDate) => {
     const today = new Date();
@@ -97,8 +98,6 @@ export default function InventoryPage() {
       return { color: 'text-green-600 bg-green-50', label: `${daysToExpiry} days`, days: daysToExpiry };
     }
   };
-
-  const tabData = getTabData();
 
   if (loading) {
     return <PageLoader text="Loading inventory..." />;
@@ -151,43 +150,39 @@ export default function InventoryPage() {
             <nav className="flex -mb-px">
               <button
                 onClick={() => setActiveTab('all')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 ${
-                  activeTab === 'all'
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`px-6 py-4 text-sm font-medium border-b-2 ${activeTab === 'all'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 All Stock
               </button>
               <button
                 onClick={() => setActiveTab('low-stock')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                  activeTab === 'low-stock'
-                    ? 'border-orange-500 text-orange-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${activeTab === 'low-stock'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <HiExclamationCircle className="w-4 h-4" />
                 Low Stock ({lowStockItems.length})
               </button>
               <button
                 onClick={() => setActiveTab('near-expiry')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                  activeTab === 'near-expiry'
-                    ? 'border-orange-500 text-orange-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${activeTab === 'near-expiry'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <HiClock className="w-4 h-4" />
                 Near Expiry ({nearExpiryBatches.length})
               </button>
               <button
                 onClick={() => setActiveTab('expired')}
-                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${
-                  activeTab === 'expired'
-                    ? 'border-red-500 text-red-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center gap-2 ${activeTab === 'expired'
+                  ? 'border-red-500 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <HiBan className="w-4 h-4" />
                 Expired ({expiredBatches.length})

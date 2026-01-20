@@ -274,6 +274,7 @@ export const paymentsAPI = {
 
 // Inventory API
 export const inventoryAPI = {
+  getAllBatches: () => apiCall('/inventory/batches'),
   getBatchesByProduct: (productId) => apiCall(`/inventory/batches/product/${productId}`),
   getBatch: (id) => apiCall(`/inventory/batches/${id}`),
   updateBatch: (id, data) => apiCall(`/inventory/batches/${id}`, {
