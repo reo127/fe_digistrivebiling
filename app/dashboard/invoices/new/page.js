@@ -73,12 +73,12 @@ export default function NewInvoice() {
 
   const loadData = async () => {
     try {
-      const [productsData, customersData, shopData] = await Promise.all([
-        productsAPI.getAll(),
+      const [batchesData, customersData, shopData] = await Promise.all([
+        productsAPI.getBatchesForInvoice(), // Get batches instead of products
         customersAPI.getAll(),
         shopAPI.get(),
       ]);
-      setProducts(productsData);
+      setProducts(batchesData); // Store batches in products state (for backward compatibility)
       setCustomers(customersData);
       setShopSettings(shopData);
       if (shopData?.defaultTaxType) {
@@ -151,7 +151,7 @@ export default function NewInvoice() {
   const addItem = () => {
     setInvoiceItems([
       ...invoiceItems,
-      { product: '', quantity: 1, sellingPrice: 0, gstRate: 12, cessRate: 0 },
+      { product: '', batch: '', selectedBatch: '', quantity: 1, sellingPrice: 0, gstRate: 12, cessRate: 0 },
     ]);
   };
 
@@ -161,15 +161,24 @@ export default function NewInvoice() {
 
   const updateItem = (index, field, value) => {
     const updated = [...invoiceItems];
-    updated[index][field] = value;
 
-    // Auto-fill product details
-    if (field === 'product') {
-      const product = products.find((p) => p._id === value);
-      if (product) {
-        updated[index].sellingPrice = product.sellingPrice;
-        updated[index].gstRate = product.gstRate;
+    // Auto-fill batch details when batch is selected
+    if (field === 'product' && value) {
+      try {
+        const batch = JSON.parse(value);
+        updated[index].selectedBatch = value; // Store JSON string for dropdown value
+        updated[index].batch = batch.batchId; // Store batch ID for backend
+        updated[index].product = batch.productId; // Store product ID for backend
+        updated[index].sellingPrice = batch.sellingPrice;
+        updated[index].gstRate = batch.gstRate;
+        updated[index].mrp = batch.mrp;
+        updated[index].availableQuantity = batch.availableQuantity; // For validation
+      } catch (e) {
+        // If value is not JSON (backward compatibility), just set the value
+        updated[index][field] = value;
       }
+    } else {
+      updated[index][field] = value;
     }
 
     setInvoiceItems(updated);
@@ -247,6 +256,16 @@ export default function NewInvoice() {
     const zeroQuantityIndex = invoiceItems.findIndex(item => !item.quantity || item.quantity <= 0);
     if (zeroQuantityIndex !== -1) {
       toast.error(`Please enter quantity for item #${zeroQuantityIndex + 1}`);
+      return;
+    }
+
+    // Validation: Check if quantity exceeds available stock
+    const exceededStockIndex = invoiceItems.findIndex(item => {
+      return item.availableQuantity && item.quantity > item.availableQuantity;
+    });
+    if (exceededStockIndex !== -1) {
+      const item = invoiceItems[exceededStockIndex];
+      toast.error(`Item #${exceededStockIndex + 1}: Quantity (${item.quantity}) exceeds available stock (${item.availableQuantity})`);
       return;
     }
 
@@ -513,15 +532,15 @@ export default function NewInvoice() {
                 <div key={index} className="flex gap-4 items-start p-4 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <select
-                      
-                      value={item.product}
+
+                      value={item.selectedBatch || ''}
                       onChange={(e) => updateItem(index, 'product', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select Product</option>
-                      {products.map((product) => (
-                        <option key={product._id} value={product._id}>
-                          {product.name} - Stock: {product.stockQuantity}
+                      {products.map((batch) => (
+                        <option key={batch.batchId} value={JSON.stringify(batch)}>
+                          {batch.label}
                         </option>
                       ))}
                     </select>

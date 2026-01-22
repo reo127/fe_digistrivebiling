@@ -51,7 +51,11 @@ export default function Products() {
 
   const loadProducts = async () => {
     try {
-      const data = await productsAPI.getAll({ search: searchTerm });
+      const params = {};
+      if (searchTerm && searchTerm.trim() !== '') {
+        params.search = searchTerm;
+      }
+      const data = await productsAPI.getAllWithBatches(params);
       setProducts(data);
     } catch (error) {
       console.error('Error loading products:', error);
@@ -88,10 +92,9 @@ export default function Products() {
       newErrors.stockQuantity = 'Stock Quantity is required and cannot be negative';
     }
 
-    // Batch Number is optional - will be auto-generated if not provided
-
-    // Batch Expiry Date is mandatory if stock quantity > 0
-    if (parseFloat(formData.stockQuantity) > 0 && (!formData.batchExpiryDate || formData.batchExpiryDate === '')) {
+    // Batch Expiry Date validation - ONLY for new products with stock
+    // Skip this validation when editing existing products
+    if (!editingProduct && parseFloat(formData.stockQuantity) > 0 && (!formData.batchExpiryDate || formData.batchExpiryDate === '')) {
       newErrors.batchExpiryDate = 'Batch Expiry Date is required when adding stock';
     }
 
@@ -232,104 +235,143 @@ export default function Products() {
               <TableSkeleton rows={8} columns={7} />
             </div>
           ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Batch/Expiry
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    MRP
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Selling Price
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    GST
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {products.length === 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="p-4 bg-gray-100 rounded-full mb-4">
-                          <HiCube className="w-12 h-12 text-gray-400" />
-                        </div>
-                        <p className="text-gray-500 font-medium">No products found</p>
-                        <p className="text-gray-400 text-sm mt-1">Add your first product to get started!</p>
-                      </div>
-                    </td>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Product
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Batch/Expiry
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Stock
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      MRP
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Selling Price
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      GST
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ) : (
-                  products.map((product) => (
-                    <tr key={product._id} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{product.name}</div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {products.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="p-4 bg-gray-100 rounded-full mb-4">
+                            <HiCube className="w-12 h-12 text-gray-400" />
+                          </div>
+                          <p className="text-gray-500 font-medium">No products found</p>
+                          <p className="text-gray-400 text-sm mt-1">Add your first product to get started!</p>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        <div className="space-y-1">
-                          <div className="font-medium">{product.batchNo || '-'}</div>
-                          {product.expiryDate && (
-                            <div className="text-xs text-gray-500">
-                              Exp: {new Date(product.expiryDate).toLocaleDateString('en-IN')}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                            product.stockQuantity === 0
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}
-                        >
-                          {product.stockQuantity} {product.unit}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{product.mrp.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{product.sellingPrice.toLocaleString('en-IN')}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700">
-                          {product.gstRate}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                        >
-                          <HiPencil className="w-4 h-4 mr-1" />
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product._id)}
-                          className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
-                        >
-                          <HiTrash className="w-4 h-4 mr-1" />
-                          Delete
-                        </button>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    products.map((product) => {
+                      // Show batch-wise rows if batches exist
+                      if (product.batches && product.batches.length > 0) {
+                        return product.batches.map((batch, batchIdx) => (
+                          <tr key={`${product._id}-${batch._id}`} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900">{product.name}</div>
+                                {product.batches.length > 1 && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Batch {batchIdx + 1} of {product.batches.length}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-900">
+                              <div className="space-y-1">
+                                <div className="font-medium">{batch.batchNo || 'N/A'}</div>
+                                {batch.expiryDate && (
+                                  <div className="text-xs text-gray-500">
+                                    Exp: {new Date(batch.expiryDate).toLocaleDateString('en-IN')}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${batch.quantity === 0
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-green-100 text-green-700'
+                                  }`}
+                              >
+                                {batch.quantity} {product.unit}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{batch.mrp?.toLocaleString('en-IN') || '-'}</td>
+                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{batch.sellingPrice?.toLocaleString('en-IN') || '-'}</td>
+                            <td className="px-6 py-4">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700">
+                                {batch.gstRate || product.gstRate}%
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
+                              <button
+                                onClick={() => handleEdit(product)}
+                                className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                              >
+                                <HiPencil className="w-4 h-4 mr-1" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(product._id)}
+                                className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                              >
+                                <HiTrash className="w-4 h-4 mr-1" />
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ));
+                      } else {
+                        // Product with no batches - show as before
+                        return (
+                          <tr key={product._id} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900">{product.name}</div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500" colSpan="5">
+                              No stock available
+                            </td>
+                            <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
+                              <button
+                                onClick={() => handleEdit(product)}
+                                className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                              >
+                                <HiPencil className="w-4 h-4 mr-1" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(product._id)}
+                                className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                              >
+                                <HiTrash className="w-4 h-4 mr-1" />
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      }
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
@@ -373,11 +415,10 @@ export default function Products() {
                           setErrors({ ...errors, name: '' });
                         }
                       }}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
-                        errors.name
-                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                      }`}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${errors.name
+                        ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                        }`}
                       placeholder="Enter product name"
                     />
                     {errors.name && (
@@ -427,6 +468,7 @@ export default function Products() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700">
                       MRP <span className="text-red-500">*</span>
+                      {editingProduct && <span className="text-xs text-gray-500 ml-2">(Read-only)</span>}
                     </label>
                     <input
                       type="number"
@@ -438,11 +480,13 @@ export default function Products() {
                           setErrors({ ...errors, mrp: '' });
                         }
                       }}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
-                        errors.mrp
+                      disabled={editingProduct}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${editingProduct
+                        ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-200'
+                        : errors.mrp
                           ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                           : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                      }`}
+                        }`}
                       placeholder="0.00"
                     />
                     {errors.mrp && (
@@ -456,6 +500,7 @@ export default function Products() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700">
                       Selling Price <span className="text-red-500">*</span>
+                      {editingProduct && <span className="text-xs text-gray-500 ml-2">(Read-only)</span>}
                     </label>
                     <input
                       type="number"
@@ -467,11 +512,13 @@ export default function Products() {
                           setErrors({ ...errors, sellingPrice: '' });
                         }
                       }}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
-                        errors.sellingPrice
+                      disabled={editingProduct}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${editingProduct
+                        ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-200'
+                        : errors.sellingPrice
                           ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                           : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                      }`}
+                        }`}
                       placeholder="0.00"
                     />
                     {errors.sellingPrice && (
@@ -485,6 +532,7 @@ export default function Products() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700">
                       Purchase Price <span className="text-red-500">*</span>
+                      {editingProduct && <span className="text-xs text-gray-500 ml-2">(Read-only)</span>}
                     </label>
                     <input
                       type="number"
@@ -496,11 +544,13 @@ export default function Products() {
                           setErrors({ ...errors, purchasePrice: '' });
                         }
                       }}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
-                        errors.purchasePrice
+                      disabled={editingProduct}
+                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${editingProduct
+                        ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-200'
+                        : errors.purchasePrice
                           ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                           : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                      }`}
+                        }`}
                       placeholder="0.00"
                     />
                     {errors.purchasePrice && (
@@ -514,23 +564,62 @@ export default function Products() {
                   <div className="space-y-2">
                     <label className="block text-sm font-semibold text-gray-700">
                       Stock Quantity <span className="text-red-500">*</span>
+                      {editingProduct && <span className="text-xs text-gray-500 ml-2">(Read-only - Managed through purchases/sales)</span>}
                     </label>
-                    <input
-                      type="number"
-                      value={formData.stockQuantity}
-                      onChange={(e) => {
-                        setFormData({ ...formData, stockQuantity: e.target.value });
-                        if (errors.stockQuantity) {
-                          setErrors({ ...errors, stockQuantity: '' });
-                        }
-                      }}
-                      className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
-                        errors.stockQuantity
-                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                      }`}
-                      placeholder="0"
-                    />
+
+                    {editingProduct && editingProduct.batches && editingProduct.batches.length > 0 ? (
+                      // Show batch breakdown for products with batches
+                      <div className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center pb-2 border-b border-gray-300">
+                            <span className="text-sm font-semibold text-gray-700">Batch Breakdown:</span>
+                            <span className="text-sm font-bold text-gray-900">Total: {formData.stockQuantity} {formData.unit}</span>
+                          </div>
+                          {editingProduct.batches.map((batch, index) => (
+                            <div key={batch._id} className="py-2 border-b border-gray-200 last:border-0">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-700">
+                                  Batch {index + 1}: {batch.batchNo || 'N/A'}
+                                </span>
+                                <span className="text-sm font-semibold text-gray-900">{batch.quantity} {formData.unit}</span>
+                              </div>
+                              {batch.expiryDate && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Expiry: {new Date(batch.expiryDate).toLocaleDateString('en-IN')}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      // Regular input for products without batches or new products
+                      <input
+                        type="number"
+                        value={formData.stockQuantity}
+                        onChange={(e) => {
+                          setFormData({ ...formData, stockQuantity: e.target.value });
+                          if (errors.stockQuantity) {
+                            setErrors({ ...errors, stockQuantity: '' });
+                          }
+                        }}
+                        disabled={editingProduct}
+                        className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${editingProduct
+                          ? 'bg-gray-100 text-gray-600 cursor-not-allowed border-gray-200'
+                          : errors.stockQuantity
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                          }`}
+                        placeholder="0"
+                      />
+                    )}
+
+                    {editingProduct && (
+                      <p className="text-xs text-blue-600 flex items-center mt-1">
+                        <HiExclamation className="w-4 h-4 mr-1" />
+                        Stock is managed through purchases and sales. Create a purchase to add more stock.
+                      </p>
+                    )}
                     {errors.stockQuantity && (
                       <p className="text-sm text-red-600 flex items-center mt-1">
                         <HiExclamation className="w-4 h-4 mr-1" />
@@ -585,11 +674,10 @@ export default function Products() {
                             }
                           }}
                           min={new Date().toISOString().split('T')[0]}
-                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${
-                            errors.batchExpiryDate
-                              ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
-                              : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                          }`}
+                          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 transition-all ${errors.batchExpiryDate
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                            }`}
                         />
                         {errors.batchExpiryDate && (
                           <p className="text-sm text-red-600 flex items-center mt-1">
