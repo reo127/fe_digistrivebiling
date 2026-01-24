@@ -41,6 +41,7 @@ const navigation = [
   { name: 'Customers', href: '/dashboard/customers', icon: HiUsers },
   { name: 'Expenses', href: '/dashboard/expenses', icon: HiCurrencyRupee },
   { name: 'Reports', href: '/dashboard/reports', icon: HiChartBar },
+  { name: 'Ledgers', href: '/dashboard/ledgers', icon: HiDocumentText },
   { name: 'Settings', href: '/dashboard/settings', icon: HiCog },
 ];
 
