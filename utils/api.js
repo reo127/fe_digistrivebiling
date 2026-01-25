@@ -74,6 +74,7 @@ export const productsAPI = {
     return apiCall(`/products/with-batches?${query}`);
   },
   getBatchesForInvoice: () => apiCall('/products/batches-for-invoice'),
+  getForPurchase: () => apiCall('/products/for-purchase'),
   getOne: (id) => apiCall(`/products/${id}`),
   create: (data) => apiCall('/products', {
     method: 'POST',
@@ -280,6 +281,12 @@ export const inventoryAPI = {
   updateBatch: (id, data) => apiCall(`/inventory/batches/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
+  }),
+  toggleBatchActive: (id) => apiCall(`/inventory/batches/${id}/toggle-active`, {
+    method: 'PUT',
+  }),
+  deleteBatch: (id) => apiCall(`/inventory/batches/${id}`, {
+    method: 'DELETE',
   }),
   getNearExpiry: (params = {}) => {
     const query = new URLSearchParams(params).toString();

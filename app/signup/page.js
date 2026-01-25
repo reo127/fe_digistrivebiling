@@ -17,28 +17,25 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [shopName, setShopName] = useState(APP_CONFIG.shopName);
   const [authorized, setAuthorized] = useState(false);
-  const { signup, user } = useAuth();
+  const { signup, user, loading: authLoading } = useAuth();
   const router = useRouter();
 
   // Check if user is superadmin
   useEffect(() => {
-    // Allow access if no user is logged in (for initial superadmin creation)
-    // OR if logged in user is superadmin
-    const storedUser = localStorage.getItem('user');
-
-    if (!storedUser) {
-      // No user logged in - allow access for initial setup
-      setAuthorized(true);
-    } else {
-      const userData = JSON.parse(storedUser);
-      if (userData.role === 'superadmin') {
+    if (!authLoading) {
+      // Allow access if no user is logged in (for initial superadmin creation)
+      // OR if logged in user is superadmin
+      if (!user) {
+        // No user logged in - allow access for initial setup
+        setAuthorized(true);
+      } else if (user.role === 'superadmin') {
         setAuthorized(true);
       } else {
         // Not a superadmin, redirect to dashboard
         router.push('/dashboard');
       }
     }
-  }, [router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     const fetchShopName = async () => {
@@ -82,13 +79,10 @@ export default function Signup() {
   };
 
   // Show loading while checking authorization
-  if (!authorized) {
+  if (authLoading || !authorized) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking authorization...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }

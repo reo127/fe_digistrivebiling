@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import DashboardLayout from '@/components/DashboardLayout';
 import { TableSkeleton } from '@/components/SkeletonLoader';
-import { productsAPI } from '@/utils/api';
+import { productsAPI, inventoryAPI } from '@/utils/api';
 import {
   HiPlus,
   HiSearch,
@@ -14,7 +14,9 @@ import {
   HiTrash,
   HiX,
   HiCube,
-  HiExclamation
+  HiExclamation,
+  HiCheckCircle,
+  HiXCircle
 } from 'react-icons/hi';
 
 export default function Products() {
@@ -153,14 +155,41 @@ export default function Products() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (confirm('Are you sure you want to delete this product?')) {
+  const handleDeleteBatch = async (batchId, productName, batchNo) => {
+    if (confirm(`Are you sure you want to delete batch "${batchNo || 'N/A'}" of "${productName}"?\n\nNote: If this is the last batch, the product will also be deleted.`)) {
       try {
-        await productsAPI.delete(id);
+        const result = await inventoryAPI.deleteBatch(batchId);
+        if (result.productDeleted) {
+          toast.success('Batch and product deleted successfully (last batch)');
+        } else {
+          toast.success('Batch deleted successfully');
+        }
         loadProducts();
       } catch (error) {
         toast.error(error.message || 'An error occurred');
       }
+    }
+  };
+
+  const handleDeleteProduct = async (productId, productName) => {
+    if (confirm(`Are you sure you want to delete product "${productName}"?\n\nThis product has no batches.`)) {
+      try {
+        await productsAPI.delete(productId);
+        toast.success('Product deleted successfully');
+        loadProducts();
+      } catch (error) {
+        toast.error(error.message || 'An error occurred');
+      }
+    }
+  };
+
+  const handleToggleBatch = async (batchId, isCurrentlyActive) => {
+    try {
+      await inventoryAPI.toggleBatchActive(batchId);
+      toast.success(`Batch ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully!`);
+      loadProducts(); // Reload to see updated status
+    } catch (error) {
+      toast.error(error.message || 'Failed to toggle batch status');
     }
   };
 
@@ -279,63 +308,114 @@ export default function Products() {
                     products.map((product) => {
                       // Show batch-wise rows if batches exist
                       if (product.batches && product.batches.length > 0) {
-                        return product.batches.map((batch, batchIdx) => (
-                          <tr key={`${product._id}-${batch._id}`} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors">
-                            <td className="px-6 py-4">
-                              <div>
-                                <div className="text-sm font-semibold text-gray-900">{product.name}</div>
-                                {product.batches.length > 1 && (
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    Batch {batchIdx + 1} of {product.batches.length}
+                        return product.batches.map((batch, batchIdx) => {
+                          const isInactive = !batch.isActive;
+                          return (
+                            <tr
+                              key={`${product._id}-${batch._id}`}
+                              className={`hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-colors ${isInactive ? 'bg-gray-50/50' : ''}`}
+                            >
+                              <td className="px-6 py-4">
+                                <div>
+                                  <div className={`text-sm font-semibold ${isInactive ? 'text-gray-400' : 'text-gray-900'}`}>
+                                    {product.name}
                                   </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-sm text-gray-900">
-                              <div className="space-y-1">
-                                <div className="font-medium">{batch.batchNo || 'N/A'}</div>
-                                {batch.expiryDate && (
-                                  <div className="text-xs text-gray-500">
-                                    Exp: {new Date(batch.expiryDate).toLocaleDateString('en-IN')}
+                                  <div className="flex items-center gap-2 mt-1">
+                                    {product.batches.length > 1 && (
+                                      <div className={`text-xs ${isInactive ? 'text-gray-400' : 'text-gray-500'}`}>
+                                        Batch {batchIdx + 1} of {product.batches.length}
+                                      </div>
+                                    )}
+                                    {isInactive && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-200 text-gray-600">
+                                        Inactive
+                                      </span>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${batch.quantity === 0
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-green-100 text-green-700'
+                                </div>
+                              </td>
+                              <td className={`px-6 py-4 text-sm ${isInactive ? 'text-gray-400' : 'text-gray-900'}`}>
+                                <div className="space-y-1">
+                                  <div className="font-medium">{batch.batchNo || 'N/A'}</div>
+                                  {batch.expiryDate && (
+                                    <div className={`text-xs ${isInactive ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      Exp: {new Date(batch.expiryDate).toLocaleDateString('en-IN')}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span
+                                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                    isInactive
+                                      ? 'bg-gray-100 text-gray-500'
+                                      : batch.quantity === 0
+                                        ? 'bg-red-100 text-red-700'
+                                        : 'bg-green-100 text-green-700'
                                   }`}
-                              >
-                                {batch.quantity} {product.unit}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{batch.mrp?.toLocaleString('en-IN') || '-'}</td>
-                            <td className="px-6 py-4 text-sm font-semibold text-gray-900">₹{batch.sellingPrice?.toLocaleString('en-IN') || '-'}</td>
-                            <td className="px-6 py-4">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700">
-                                {batch.gstRate || product.gstRate}%
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right text-sm font-medium space-x-2">
-                              <button
-                                onClick={() => handleEdit(product)}
-                                className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
-                              >
-                                <HiPencil className="w-4 h-4 mr-1" />
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDelete(product._id)}
-                                className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
-                              >
-                                <HiTrash className="w-4 h-4 mr-1" />
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ));
+                                >
+                                  {batch.quantity} {product.unit}
+                                </span>
+                              </td>
+                              <td className={`px-6 py-4 text-sm font-semibold ${isInactive ? 'text-gray-400' : 'text-gray-900'}`}>
+                                ₹{batch.mrp?.toLocaleString('en-IN') || '-'}
+                              </td>
+                              <td className={`px-6 py-4 text-sm font-semibold ${isInactive ? 'text-gray-400' : 'text-gray-900'}`}>
+                                ₹{batch.sellingPrice?.toLocaleString('en-IN') || '-'}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
+                                  isInactive ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  {batch.gstRate || product.gstRate}%
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right text-sm font-medium">
+                                <div className="flex items-center justify-end gap-3">
+                                  {/* Toggle Slider */}
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-xs font-medium ${batch.isActive ? 'text-gray-400' : 'text-gray-600'}`}>
+                                      Off
+                                    </span>
+                                    <button
+                                      onClick={() => handleToggleBatch(batch._id, batch.isActive)}
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                        batch.isActive
+                                          ? 'bg-green-500 focus:ring-green-500'
+                                          : 'bg-gray-300 focus:ring-gray-400'
+                                      }`}
+                                      title={batch.isActive ? 'Click to deactivate' : 'Click to activate'}
+                                    >
+                                      <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                          batch.isActive ? 'translate-x-6' : 'translate-x-1'
+                                        }`}
+                                      />
+                                    </button>
+                                    <span className={`text-xs font-medium ${batch.isActive ? 'text-green-600' : 'text-gray-400'}`}>
+                                      On
+                                    </span>
+                                  </div>
+
+                                  <button
+                                    onClick={() => handleEdit(product)}
+                                    className="inline-flex items-center px-3 py-1.5 text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                                  >
+                                    <HiPencil className="w-4 h-4 mr-1" />
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteBatch(batch._id, product.name, batch.batchNo)}
+                                    className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                                  >
+                                    <HiTrash className="w-4 h-4 mr-1" />
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        });
                       } else {
                         // Product with no batches - show as before
                         return (
@@ -357,7 +437,7 @@ export default function Products() {
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDelete(product._id)}
+                                onClick={() => handleDeleteProduct(product._id, product.name)}
                                 className="inline-flex items-center px-3 py-1.5 text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
                               >
                                 <HiTrash className="w-4 h-4 mr-1" />
