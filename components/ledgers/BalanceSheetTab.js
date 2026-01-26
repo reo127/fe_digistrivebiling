@@ -12,8 +12,14 @@ export default function BalanceSheetTab({ dateRange, setDateRange }) {
     const [balanceSheet, setBalanceSheet] = useState(null);
 
     const generateBalanceSheet = async () => {
-        if (!dateRange.endDate) {
-            toast.warning('Please select a date');
+        if (!dateRange.startDate || !dateRange.endDate) {
+            toast.warning('Please select both start and end dates');
+            return;
+        }
+
+        // Validate that start date is not later than end date
+        if (new Date(dateRange.startDate) > new Date(dateRange.endDate)) {
+            toast.warning('Start date cannot be later than end date');
             return;
         }
 
@@ -37,7 +43,7 @@ export default function BalanceSheetTab({ dateRange, setDateRange }) {
             invoices.forEach(inv => {
                 if (inv.payments) {
                     inv.payments.forEach(pay => {
-                        if (pay.paymentMethod === 'Cash') cashInHand += pay.amount;
+                        if (pay.paymentMethod === 'CASH') cashInHand += pay.amount;
                         else bankBalance += pay.amount;
                     });
                 }
@@ -46,14 +52,14 @@ export default function BalanceSheetTab({ dateRange, setDateRange }) {
             purchases.forEach(pur => {
                 if (pur.payments) {
                     pur.payments.forEach(pay => {
-                        if (pay.paymentMethod === 'Cash') cashInHand -= pay.amount;
+                        if (pay.paymentMethod === 'CASH') cashInHand -= pay.amount;
                         else bankBalance -= pay.amount;
                     });
                 }
             });
 
             expenses.forEach(exp => {
-                if (exp.paymentMethod === 'Cash') cashInHand -= exp.amount;
+                if (exp.paymentMethod === 'CASH') cashInHand -= exp.amount;
                 else bankBalance -= exp.amount;
             });
 
@@ -137,14 +143,24 @@ export default function BalanceSheetTab({ dateRange, setDateRange }) {
 
             {/* Date Filter */}
             <div className="bg-gray-50 rounded-lg p-6 mb-6 no-print border border-gray-200">
-                <h4 className="text-md font-semibold text-gray-900 mb-4">Select Date</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-black">
+                <h4 className="text-md font-semibold text-gray-900 mb-4">Select Period</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-black">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">As on Date</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                        <input
+                            type="date"
+                            value={dateRange.startDate}
+                            onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">End Date (As on Date)</label>
                         <input
                             type="date"
                             value={dateRange.endDate}
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                            min={dateRange.startDate}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -164,8 +180,8 @@ export default function BalanceSheetTab({ dateRange, setDateRange }) {
             {!balanceSheet && !loading && (
                 <div className="bg-gray-50 rounded-lg p-8 text-center">
                     <HiDocumentReport className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Select a date and click &quot;Generate Balance Sheet&quot;</p>
-                    <p className="text-sm text-gray-400 mt-2">This will show financial position as on that date</p>
+                    <p className="text-gray-500">Select a date range and click &quot;Generate Balance Sheet&quot;</p>
+                    <p className="text-sm text-gray-400 mt-2">This will show financial position for the selected period</p>
                 </div>
             )}
 

@@ -70,7 +70,7 @@ export default function TrialBalanceTab({ dateRange, setDateRange }) {
             invoices.forEach(inv => {
                 if (inv.payments) {
                     inv.payments.forEach(pay => {
-                        if (pay.paymentMethod === 'Cash') cashBalance += pay.amount;
+                        if (pay.paymentMethod === 'CASH') cashBalance += pay.amount;
                         else bankBalance += pay.amount;
                     });
                 }
@@ -80,7 +80,7 @@ export default function TrialBalanceTab({ dateRange, setDateRange }) {
             purchases.forEach(pur => {
                 if (pur.payments) {
                     pur.payments.forEach(pay => {
-                        if (pay.paymentMethod === 'Cash') cashBalance -= pay.amount;
+                        if (pay.paymentMethod === 'CASH') cashBalance -= pay.amount;
                         else bankBalance -= pay.amount;
                     });
                 }
@@ -88,7 +88,7 @@ export default function TrialBalanceTab({ dateRange, setDateRange }) {
 
             // Expense payments
             expenses.forEach(exp => {
-                if (exp.paymentMethod === 'Cash') cashBalance -= exp.amount;
+                if (exp.paymentMethod === 'CASH') cashBalance -= exp.amount;
                 else bankBalance -= exp.amount;
             });
 

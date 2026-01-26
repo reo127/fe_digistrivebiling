@@ -45,7 +45,7 @@ export default function CashLedgerTab({ dateRange, setDateRange }) {
             invoices.forEach(invoice => {
                 if (invoice.payments && invoice.payments.length > 0) {
                     invoice.payments.forEach(payment => {
-                        if (payment.paymentMethod === 'Cash') {
+                        if (payment.paymentMethod === 'CASH') {
                             transactions.push({
                                 date: payment.paymentDate || payment.date,
                                 type: 'Cash Sale',
@@ -63,7 +63,7 @@ export default function CashLedgerTab({ dateRange, setDateRange }) {
             purchases.forEach(purchase => {
                 if (purchase.payments && purchase.payments.length > 0) {
                     purchase.payments.forEach(payment => {
-                        if (payment.paymentMethod === 'Cash') {
+                        if (payment.paymentMethod === 'CASH') {
                             transactions.push({
                                 date: payment.paymentDate || payment.date,
                                 type: 'Cash Purchase',
@@ -79,7 +79,7 @@ export default function CashLedgerTab({ dateRange, setDateRange }) {
 
             // Add cash expenses
             expenses.forEach(expense => {
-                if (expense.paymentMethod === 'Cash') {
+                if (expense.paymentMethod === 'CASH') {
                     transactions.push({
                         date: expense.expenseDate,
                         type: 'Cash Expense',
@@ -230,10 +230,10 @@ export default function CashLedgerTab({ dateRange, setDateRange }) {
                                         </td>
                                         <td className="px-4 py-2">
                                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${txn.type === 'Cash Sale'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : txn.type === 'Cash Purchase'
-                                                        ? 'bg-orange-100 text-orange-700'
-                                                        : 'bg-red-100 text-red-700'
+                                                ? 'bg-green-100 text-green-700'
+                                                : txn.type === 'Cash Purchase'
+                                                    ? 'bg-orange-100 text-orange-700'
+                                                    : 'bg-red-100 text-red-700'
                                                 }`}>
                                                 {txn.type}
                                             </span>

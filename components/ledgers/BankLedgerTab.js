@@ -45,7 +45,7 @@ export default function BankLedgerTab({ dateRange, setDateRange }) {
             invoices.forEach(invoice => {
                 if (invoice.payments && invoice.payments.length > 0) {
                     invoice.payments.forEach(payment => {
-                        if (['Bank Transfer', 'UPI', 'Card', 'Cheque', 'Online'].includes(payment.paymentMethod)) {
+                        if (['BANK_TRANSFER', 'UPI', 'CARD', 'CHEQUE'].includes(payment.paymentMethod)) {
                             transactions.push({
                                 date: payment.paymentDate || payment.date,
                                 type: 'Bank Receipt',
@@ -64,7 +64,7 @@ export default function BankLedgerTab({ dateRange, setDateRange }) {
             purchases.forEach(purchase => {
                 if (purchase.payments && purchase.payments.length > 0) {
                     purchase.payments.forEach(payment => {
-                        if (['Bank Transfer', 'UPI', 'Card', 'Cheque', 'Online'].includes(payment.paymentMethod)) {
+                        if (['BANK_TRANSFER', 'UPI', 'CARD', 'CHEQUE'].includes(payment.paymentMethod)) {
                             transactions.push({
                                 date: payment.paymentDate || payment.date,
                                 type: 'Bank Payment',
@@ -81,7 +81,7 @@ export default function BankLedgerTab({ dateRange, setDateRange }) {
 
             // Add bank expenses
             expenses.forEach(expense => {
-                if (['Bank Transfer', 'UPI', 'Card', 'Cheque', 'Online'].includes(expense.paymentMethod)) {
+                if (['BANK_TRANSFER', 'UPI', 'CARD', 'CHEQUE'].includes(expense.paymentMethod)) {
                     transactions.push({
                         date: expense.expenseDate,
                         type: 'Bank Expense',
@@ -233,10 +233,10 @@ export default function BankLedgerTab({ dateRange, setDateRange }) {
                                         </td>
                                         <td className="px-4 py-2">
                                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${txn.type === 'Bank Receipt'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : txn.type === 'Bank Payment'
-                                                        ? 'bg-orange-100 text-orange-700'
-                                                        : 'bg-red-100 text-red-700'
+                                                ? 'bg-green-100 text-green-700'
+                                                : txn.type === 'Bank Payment'
+                                                    ? 'bg-orange-100 text-orange-700'
+                                                    : 'bg-red-100 text-red-700'
                                                 }`}>
                                                 {txn.type}
                                             </span>
