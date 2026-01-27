@@ -368,4 +368,10 @@ export const reportsAPI = {
     const query = new URLSearchParams(params).toString();
     return apiCall(`/reports/summary?${query}`);
   },
+
+  // Credit Notes (for GSTR-1 CDNR/CDNUR)
+  getCreditNotes: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/sales-returns?${query}`);
+  },
 };

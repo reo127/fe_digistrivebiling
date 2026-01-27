@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { HiDownload, HiDocumentReport } from 'react-icons/hi';
 import { reportsAPI, shopAPI } from '@/utils/api';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 export default function ReportsPage() {
   const toast = useToast();
@@ -64,7 +65,15 @@ export default function ReportsPage() {
 
       switch (activeTab) {
         case 'gstr1':
-          data = await reportsAPI.getGSTR1(params);
+          // Fetch both invoices and credit notes for GSTR-1
+          const [gstr1Data, creditNotes] = await Promise.all([
+            reportsAPI.getGSTR1(params),
+            reportsAPI.getCreditNotes(params)
+          ]);
+          data = {
+            ...gstr1Data,
+            creditNotes: creditNotes || []
+          };
           break;
         case 'gstr3b':
           data = await reportsAPI.getGSTR3B(params);
@@ -86,6 +95,7 @@ export default function ReportsPage() {
       console.log('📦 B2B Invoices Count:', data.b2bInvoices?.length);
       console.log('📦 B2C Large Count:', data.b2cLarge?.length);
       console.log('📦 B2C Small Count:', data.b2cSmall?.length);
+      console.log('📝 Credit Notes Count:', data.creditNotes?.length);
     } catch (error) {
       console.error('Error generating report:', error);
       toast.error(error.message || 'Failed to generate report');
@@ -116,19 +126,39 @@ export default function ReportsPage() {
   };
 
   const exportToJSON = () => {
+    // Validation: Check if report data exists
+    if (!reportData) {
+      toast.error('Please generate a report first');
+      return;
+    }
+
+    // Validation: Check if shop GSTIN is configured
+    if (!shopSettings?.gstin) {
+      toast.error('GSTIN not configured. Please update shop settings before exporting.');
+      return;
+    }
+
     const reportName = tabs.find(t => t.id === activeTab)?.name || 'Report';
     const dateStr = `${dateRange.startDate}_to_${dateRange.endDate}`;
 
-    const jsonData = {
-      reportType: reportName,
-      reportId: activeTab,
-      generatedAt: new Date().toISOString(),
-      period: {
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate
-      },
-      data: reportData
-    };
+    let jsonData;
+
+    // Generate GST Portal compliant JSON for GSTR-1
+    if (activeTab === 'gstr1') {
+      jsonData = transformToGSTR1Format(reportData, shopSettings, dateRange);
+    } else {
+      // For other reports, use generic format
+      jsonData = {
+        reportType: reportName,
+        reportId: activeTab,
+        generatedAt: new Date().toISOString(),
+        period: {
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        },
+        data: reportData
+      };
+    }
 
     const jsonString = JSON.stringify(jsonData, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -140,172 +170,635 @@ export default function ReportsPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+
+    toast.success(`${reportName} JSON exported successfully!`);
   };
 
-  const exportToExcel = () => {
-    const workbook = XLSX.utils.book_new();
+  // Transform data to GST Portal GSTR-1 format
+  const transformToGSTR1Format = (data, shop, dateRange) => {
+    // Helper: Format date to DD-MM-YYYY
+    const formatGSTDate = (dateStr) => {
+      const date = new Date(dateStr);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    };
+
+    // Helper: Get financial period (MMYYYY format)
+    const getFinancialPeriod = (dateStr) => {
+      const date = new Date(dateStr);
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${month}${year}`;
+    };
+
+    // Helper: Get state code from place of supply
+    const getStateCode = (placeOfSupply) => {
+      if (!placeOfSupply) return shop.stateCode || "29"; // Default to Karnataka
+      // Extract numeric code if format is "29-Karnataka"
+      const match = placeOfSupply.match(/^(\d+)/);
+      return match ? match[1] : placeOfSupply;
+    };
+
+    // Initialize GST Portal structure with mandatory fields
+    const gstr1 = {
+      gstin: shop.gstin,
+      fp: getFinancialPeriod(dateRange.endDate),
+      gt: data.summary?.totalInvoiceValue || 0,
+      cur_gt: data.summary?.totalInvoiceValue || 0
+    };
+
+    // Transform B2B Invoices (Business to Business)
+    const b2bData = [];
+    const b2bByGstin = {};
+
+    (data.b2bInvoices || []).forEach(inv => {
+      // Skip if missing critical data
+      if (!inv.gstin || !inv.invoiceNumber || !inv.invoiceDate) {
+        console.warn(`Skipping B2B invoice ${inv.invoiceNumber || 'Unknown'}: Missing required fields`);
+        return;
+      }
+
+      // Skip placeholder/test invoices
+      if (inv.invoiceNumber.toUpperCase().includes('TEST') ||
+        inv.invoiceNumber.toUpperCase().includes('DRAFT')) {
+        console.warn(`Skipping placeholder invoice: ${inv.invoiceNumber}`);
+        return;
+      }
+
+      // Group by GSTIN
+      if (!b2bByGstin[inv.gstin]) {
+        b2bByGstin[inv.gstin] = [];
+      }
+
+      // Transform invoice
+      const gstInvoice = {
+        inum: inv.invoiceNumber,
+        idt: formatGSTDate(inv.invoiceDate),
+        val: parseFloat((inv.invoiceValue || 0).toFixed(2)),
+        pos: getStateCode(inv.placeOfSupply),
+        rchrg: "N", // Reverse charge - default No
+        inv_typ: "R", // Regular invoice
+        itms: []
+      };
+
+      // Transform items
+      if (inv.items && inv.items.length > 0) {
+        inv.items.forEach((item, idx) => {
+          gstInvoice.itms.push({
+            num: idx + 1,
+            itm_det: {
+              rt: parseFloat(item.gstRate || 0),
+              txval: parseFloat((item.taxableAmount || item.taxableValue || 0).toFixed(2)),
+              iamt: parseFloat((item.igst || 0).toFixed(2)),
+              camt: parseFloat((item.cgst || 0).toFixed(2)),
+              samt: parseFloat((item.sgst || 0).toFixed(2)),
+              csamt: parseFloat((item.cessAmount || 0).toFixed(2))
+            }
+          });
+        });
+      } else {
+        // If no items, create single item from invoice totals
+        gstInvoice.itms.push({
+          num: 1,
+          itm_det: {
+            rt: parseFloat(inv.gstRate || 0),
+            txval: parseFloat((inv.taxableValue || 0).toFixed(2)),
+            iamt: parseFloat((inv.igst || 0).toFixed(2)),
+            camt: parseFloat((inv.cgst || 0).toFixed(2)),
+            samt: parseFloat((inv.sgst || 0).toFixed(2)),
+            csamt: parseFloat((inv.cessAmount || 0).toFixed(2))
+          }
+        });
+      }
+
+      b2bByGstin[inv.gstin].push(gstInvoice);
+    });
+
+    // Convert grouped B2B data to array format
+    Object.entries(b2bByGstin).forEach(([gstin, invoices]) => {
+      b2bData.push({
+        ctin: gstin,
+        inv: invoices
+      });
+    });
+
+    // Only add b2b section if it has data
+    if (b2bData.length > 0) {
+      gstr1.b2b = b2bData;
+    }
+
+    // Transform B2CL (B2C Large - invoices > 2.5 lakhs)
+    const b2clData = [];
+    (data.b2cLarge || []).forEach(inv => {
+      if (!inv.invoiceNumber || !inv.invoiceDate) {
+        console.warn(`Skipping B2CL invoice: Missing required fields`);
+        return;
+      }
+
+      b2clData.push({
+        pos: getStateCode(inv.placeOfSupply),
+        inv: [{
+          inum: inv.invoiceNumber,
+          idt: formatGSTDate(inv.invoiceDate),
+          val: parseFloat((inv.invoiceValue || 0).toFixed(2)),
+          itms: [{
+            num: 1,
+            itm_det: {
+              rt: parseFloat(inv.gstRate || 0),
+              txval: parseFloat((inv.taxableValue || 0).toFixed(2)),
+              iamt: parseFloat((inv.igst || 0).toFixed(2)),
+              camt: parseFloat((inv.cgst || 0).toFixed(2)),
+              samt: parseFloat((inv.sgst || 0).toFixed(2)),
+              csamt: parseFloat((inv.cessAmount || 0).toFixed(2))
+            }
+          }]
+        }]
+      });
+    });
+
+    // Only add b2cl section if it has data
+    if (b2clData.length > 0) {
+      gstr1.b2cl = b2clData;
+    }
+
+    // Transform B2CS (B2C Small - invoices <= 2.5 lakhs)
+    const b2csData = [];
+    const b2csByRateAndState = {};
+
+    (data.b2cSmall || []).forEach(inv => {
+      const key = `${inv.gstRate || 0}_${getStateCode(inv.placeOfSupply)}`;
+
+      if (!b2csByRateAndState[key]) {
+        b2csByRateAndState[key] = {
+          sply_ty: "INTRA", // Intra-state supply (can be INTER for interstate)
+          pos: getStateCode(inv.placeOfSupply),
+          typ: "OE", // Other than exports
+          txval: 0,
+          iamt: 0,
+          camt: 0,
+          samt: 0,
+          csamt: 0,
+          rt: parseFloat(inv.gstRate || 0)
+        };
+      }
+
+      b2csByRateAndState[key].txval += parseFloat(inv.taxableValue || 0);
+      b2csByRateAndState[key].iamt += parseFloat(inv.igst || 0);
+      b2csByRateAndState[key].camt += parseFloat(inv.cgst || 0);
+      b2csByRateAndState[key].samt += parseFloat(inv.sgst || 0);
+      b2csByRateAndState[key].csamt += parseFloat(inv.cessAmount || 0);
+    });
+
+    // Convert to array and round values
+    Object.values(b2csByRateAndState).forEach(item => {
+      b2csData.push({
+        ...item,
+        txval: parseFloat(item.txval.toFixed(2)),
+        iamt: parseFloat(item.iamt.toFixed(2)),
+        camt: parseFloat(item.camt.toFixed(2)),
+        samt: parseFloat(item.samt.toFixed(2)),
+        csamt: parseFloat(item.csamt.toFixed(2))
+      });
+    });
+
+    // Only add b2cs section if it has data
+    if (b2csData.length > 0) {
+      gstr1.b2cs = b2csData;
+    }
+
+    // HSN Summary
+    const hsnData = {};
+    const allInvoices = [
+      ...(data.b2bInvoices || []),
+      ...(data.b2cLarge || []),
+      ...(data.b2cSmall || [])
+    ];
+
+    allInvoices.forEach(inv => {
+      if (inv.items && inv.items.length > 0) {
+        inv.items.forEach(item => {
+          const hsn = item.hsnCode || item.hsn || 'N/A';
+
+          // Skip if no valid HSN code
+          if (hsn === 'N/A' || !hsn) return;
+
+          if (!hsnData[hsn]) {
+            hsnData[hsn] = {
+              num: 1,
+              hsn_sc: hsn,
+              desc: item.productName || item.description || '',
+              uqc: item.unit || item.uqc || 'PCS',
+              qty: 0,
+              val: 0,
+              txval: 0,
+              iamt: 0,
+              camt: 0,
+              samt: 0,
+              csamt: 0,
+              rt: parseFloat(item.gstRate || 0)
+            };
+          }
+
+          hsnData[hsn].qty += parseFloat(item.quantity || 0);
+          hsnData[hsn].val += parseFloat(item.totalAmount || 0);
+          hsnData[hsn].txval += parseFloat(item.taxableAmount || item.taxableValue || 0);
+          hsnData[hsn].iamt += parseFloat(item.igst || 0);
+          hsnData[hsn].camt += parseFloat(item.cgst || 0);
+          hsnData[hsn].samt += parseFloat(item.sgst || 0);
+          hsnData[hsn].csamt += parseFloat(item.cessAmount || 0);
+        });
+      }
+    });
+
+    // Convert HSN data to array and round values
+    const hsnArray = Object.values(hsnData).map((item, idx) => ({
+      ...item,
+      num: idx + 1,
+      qty: parseFloat(item.qty.toFixed(2)),
+      val: parseFloat(item.val.toFixed(2)),
+      txval: parseFloat(item.txval.toFixed(2)),
+      iamt: parseFloat(item.iamt.toFixed(2)),
+      camt: parseFloat(item.camt.toFixed(2)),
+      samt: parseFloat(item.samt.toFixed(2)),
+      csamt: parseFloat(item.csamt.toFixed(2))
+    }));
+
+    // Only add hsn section if it has data
+    if (hsnArray.length > 0) {
+      gstr1.hsn = {
+        data: hsnArray
+      };
+    }
+
+    // CDNR - Credit/Debit Notes (Registered - B2B)
+    const cdnrData = [];
+    const cdnrByGstin = {};
+
+    (data.creditNotes || []).forEach(note => {
+      // Only include if customer has GSTIN (B2B)
+      if (!note.customerGstin || note.customerGstin.trim() === '') return;
+
+      // Skip if missing critical data
+      if (!note.creditNoteNumber || !note.returnDate) {
+        console.warn(`Skipping credit note: Missing required fields`);
+        return;
+      }
+
+      // Group by customer GSTIN
+      if (!cdnrByGstin[note.customerGstin]) {
+        cdnrByGstin[note.customerGstin] = [];
+      }
+
+      cdnrByGstin[note.customerGstin].push({
+        nt_num: note.creditNoteNumber,
+        nt_dt: formatGSTDate(note.returnDate),
+        ntty: "C", // C for Credit Note, D for Debit Note
+        rsn: note.reason || "Sales Return",
+        p_gst: "N", // Pre-GST
+        inum: note.originalInvoiceNumber || "",
+        idt: note.originalInvoiceDate ? formatGSTDate(note.originalInvoiceDate) : "",
+        val: parseFloat((note.grandTotal || 0).toFixed(2)),
+        itms: note.items ? note.items.map((item, idx) => ({
+          num: idx + 1,
+          itm_det: {
+            rt: parseFloat(item.gstRate || 0),
+            txval: parseFloat((item.taxableAmount || 0).toFixed(2)),
+            iamt: parseFloat((item.igst || 0).toFixed(2)),
+            camt: parseFloat((item.cgst || 0).toFixed(2)),
+            samt: parseFloat((item.sgst || 0).toFixed(2)),
+            csamt: parseFloat((item.cessAmount || 0).toFixed(2))
+          }
+        })) : [{
+          num: 1,
+          itm_det: {
+            rt: parseFloat(note.gstRate || 0),
+            txval: parseFloat((note.subtotal || 0).toFixed(2)),
+            iamt: parseFloat((note.totalIGST || 0).toFixed(2)),
+            camt: parseFloat((note.totalCGST || 0).toFixed(2)),
+            samt: parseFloat((note.totalSGST || 0).toFixed(2)),
+            csamt: 0
+          }
+        }]
+      });
+    });
+
+    // Convert grouped CDNR data to array format
+    Object.entries(cdnrByGstin).forEach(([gstin, notes]) => {
+      cdnrData.push({
+        ctin: gstin,
+        nt: notes
+      });
+    });
+
+    // Only add cdnr section if it has data
+    if (cdnrData.length > 0) {
+      gstr1.cdnr = cdnrData;
+    }
+
+    // CDNUR - Credit/Debit Notes (Unregistered - B2C)
+    const cdnurData = [];
+
+    (data.creditNotes || []).forEach(note => {
+      // Only include if customer has NO GSTIN (B2C)
+      if (note.customerGstin && note.customerGstin.trim() !== '') return;
+
+      // Skip if missing critical data
+      if (!note.creditNoteNumber || !note.returnDate) {
+        console.warn(`Skipping B2C credit note: Missing required fields`);
+        return;
+      }
+
+      cdnurData.push({
+        typ: "B2CL", // B2CL for large invoices, B2CS for small
+        nt_num: note.creditNoteNumber,
+        nt_dt: formatGSTDate(note.returnDate),
+        ntty: "C", // C for Credit Note
+        rsn: note.reason || "Sales Return",
+        p_gst: "N",
+        inum: note.originalInvoiceNumber || "",
+        idt: note.originalInvoiceDate ? formatGSTDate(note.originalInvoiceDate) : "",
+        val: parseFloat((note.grandTotal || 0).toFixed(2)),
+        itms: note.items ? note.items.map((item, idx) => ({
+          num: idx + 1,
+          itm_det: {
+            rt: parseFloat(item.gstRate || 0),
+            txval: parseFloat((item.taxableAmount || 0).toFixed(2)),
+            iamt: parseFloat((item.igst || 0).toFixed(2)),
+            camt: parseFloat((item.cgst || 0).toFixed(2)),
+            samt: parseFloat((item.sgst || 0).toFixed(2)),
+            csamt: parseFloat((item.cessAmount || 0).toFixed(2))
+          }
+        })) : [{
+          num: 1,
+          itm_det: {
+            rt: parseFloat(note.gstRate || 0),
+            txval: parseFloat((note.subtotal || 0).toFixed(2)),
+            iamt: parseFloat((note.totalIGST || 0).toFixed(2)),
+            camt: parseFloat((note.totalCGST || 0).toFixed(2)),
+            samt: parseFloat((note.totalSGST || 0).toFixed(2)),
+            csamt: 0
+          }
+        }]
+      });
+    });
+
+    // Only add cdnur section if it has data
+    if (cdnurData.length > 0) {
+      gstr1.cdnur = cdnurData;
+    }
+
+    // NIL - Nil Rated, Exempted and Non-GST Supplies
+    const nilSupplies = {
+      inv: [
+        { sply_ty: "INTRB2B", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
+        { sply_ty: "INTRB2C", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
+        { sply_ty: "INTERB2B", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
+        { sply_ty: "INTERB2C", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 }
+      ]
+    };
+
+    // Calculate nil-rated supplies (0% GST)
+    allInvoices.forEach(inv => {
+      const isNilRated = inv.items ?
+        inv.items.some(item => (item.gstRate || 0) === 0) :
+        (inv.gstRate || 0) === 0 || (inv.totalTax || 0) === 0;
+
+      if (isNilRated) {
+        const hasGstin = inv.gstin || inv.customerGstin;
+        const isInterState = inv.taxType === 'IGST' || (inv.totalIGST || 0) > 0;
+
+        let supplyType;
+        if (isInterState && hasGstin) supplyType = "INTERB2B";
+        else if (isInterState && !hasGstin) supplyType = "INTERB2C";
+        else if (!isInterState && hasGstin) supplyType = "INTRB2B";
+        else supplyType = "INTRB2C";
+
+        const supplyIndex = nilSupplies.inv.findIndex(s => s.sply_ty === supplyType);
+        if (supplyIndex !== -1) {
+          nilSupplies.inv[supplyIndex].nil_amt += parseFloat(inv.grandTotal || inv.invoiceValue || 0);
+        }
+      }
+    });
+
+    // Round nil amounts
+    nilSupplies.inv = nilSupplies.inv.map(item => ({
+      ...item,
+      nil_amt: parseFloat(item.nil_amt.toFixed(2)),
+      expt_amt: parseFloat(item.expt_amt.toFixed(2)),
+      ngsup_amt: parseFloat(item.ngsup_amt.toFixed(2))
+    }));
+
+    // Only add nil section if there are nil-rated supplies
+    const hasNilSupplies = nilSupplies.inv.some(item => item.nil_amt > 0 || item.expt_amt > 0 || item.ngsup_amt > 0);
+    if (hasNilSupplies) {
+      gstr1.nil = nilSupplies;
+    }
+
+    // DOC_ISSUE - Documents Issued
+    const invoiceNumbers = allInvoices.map(inv => inv.invoiceNumber).filter(Boolean).sort();
+    const creditNoteNumbers = (data.creditNotes || []).map(note => note.creditNoteNumber).filter(Boolean).sort();
+
+    const docIssue = {
+      doc_det: []
+    };
+
+    // Invoices
+    if (invoiceNumbers.length > 0) {
+      docIssue.doc_det.push({
+        doc_num: 1,
+        doc_typ: "Invoices for outward supply",
+        docs: [{
+          num: 1,
+          from: invoiceNumbers[0],
+          to: invoiceNumbers[invoiceNumbers.length - 1],
+          totnum: invoiceNumbers.length,
+          cancel: 0,
+          net_issue: invoiceNumbers.length
+        }]
+      });
+    }
+
+    // Credit Notes
+    if (creditNoteNumbers.length > 0) {
+      docIssue.doc_det.push({
+        doc_num: 2,
+        doc_typ: "Credit Notes",
+        docs: [{
+          num: 1,
+          from: creditNoteNumbers[0],
+          to: creditNoteNumbers[creditNoteNumbers.length - 1],
+          totnum: creditNoteNumbers.length,
+          cancel: 0,
+          net_issue: creditNoteNumbers.length
+        }]
+      });
+    }
+
+    // Only add doc_issue section if there are documents
+    if (docIssue.doc_det.length > 0) {
+      gstr1.doc_issue = docIssue;
+    }
+
+    return gstr1;
+  };
+
+  const exportToExcel = async () => {
     const reportName = tabs.find(t => t.id === activeTab)?.name || 'Report';
     const dateStr = `${dateRange.startDate}_to_${dateRange.endDate}`;
 
     if (activeTab === 'gstr1') {
-      // Debug: Log report data to verify structure
-      console.log('GSTR-1 Report Data:', reportData);
-      console.log('B2B Invoices:', reportData.b2bInvoices?.length || 0);
-      console.log('B2C Large:', reportData.b2cLarge?.length || 0);
-      console.log('B2C Small:', reportData.b2cSmall?.length || 0);
+      // Create a new workbook using ExcelJS
+      const workbook = new ExcelJS.Workbook();
 
-      // Get period formatted
-      const startDate = new Date(dateRange.startDate);
-      const endDate = new Date(dateRange.endDate);
-      const periodStr = `${startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+      // Helper function to format dates
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+      };
 
-      // Main GSTR1 Report Sheet
-      const gstr1Data = [
-        ['Period', periodStr, '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['1. GSTIN', shopSettings?.gstin || '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['2.a Legal name of the registered person.', shopSettings?.shopName || '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['2.b Trade name, if any', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['3.a Aggregate turnover of the preceeding Financial Year', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['3.b Aggregate turnover, April to June 2017', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['GSTIN/UIN', 'Party Name', 'Transaction Type', 'Invoice No.', 'Invoice Date', 'Invoice Value', 'Rate', 'Cess Rate', 'Taxable value', 'Reverse Charge', 'Integrated Tax Amount', 'Central Tax Amount', 'State/UT Tax Amount', 'Cess Amount', 'Place of Supply(Name of state)'],
-        ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
-      ];
+      // Helper function to apply styles
+      const applyHeaderStyle = (cell) => {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' }
+        };
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' },
+          size: 11
+        };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      };
 
-      // Add invoice data rows
-      let totalInvoiceValue = 0;
-      let totalTaxableValue = 0;
-      let totalIGST = 0;
-      let totalCGST = 0;
-      let totalSGST = 0;
-      let totalCess = 0;
+      const applyTitleStyle = (cell) => {
+        cell.font = {
+          bold: true,
+          size: 12,
+          color: { argb: 'FF1F4E78' }
+        };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+      };
 
-      // Combine all invoices (B2B, B2C Large, and B2C Small)
+      const applySummaryStyle = (cell) => {
+        cell.font = { bold: true, size: 10 };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      };
+
+      const applyDataStyle = (cell) => {
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          right: { style: 'thin', color: { argb: 'FFD0D0D0' } }
+        };
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+      };
+
+      // Combine all invoices for reference
       const allInvoices = [
         ...(reportData.b2bInvoices || []),
         ...(reportData.b2cLarge || []),
         ...(reportData.b2cSmall || [])
       ];
 
-      allInvoices.forEach(inv => {
-        const invoiceDate = new Date(inv.invoiceDate);
-        const formattedDate = `${String(invoiceDate.getDate()).padStart(2, '0')}/${String(invoiceDate.getMonth() + 1).padStart(2, '0')}/${invoiceDate.getFullYear()}`;
+      // ==================== SHEET 1: B2B (4A, 4B, 6B, 6C) ====================
+      const b2bSheet = workbook.addWorksheet('b2b');
+      const b2bInvoices = reportData.b2bInvoices || [];
+      const uniqueRecipients = new Set(b2bInvoices.map(inv => inv.gstin)).size;
+      const b2bTotalInvoiceValue = b2bInvoices.reduce((sum, inv) => sum + (inv.invoiceValue || 0), 0);
 
-        gstr1Data.push([
-          inv.gstin || '',
-          inv.customerName || '',
-          'Sale',
-          inv.invoiceNumber || '',
-          formattedDate,
-          inv.invoiceValue || 0,
-          inv.gstRate || 0,
-          inv.cessRate || 0,
-          inv.taxableValue || 0,
-          'N',
-          inv.igst || 0,
-          inv.cgst || 0,
-          inv.sgst || 0,
-          inv.cessAmount || 0,
-          inv.placeOfSupply || ''
-        ]);
+      // Add title
+      b2bSheet.addRow(['Summary For B2B, SEZ, DE (4A, 4B, 6B, 6C)']);
+      applyTitleStyle(b2bSheet.getCell('A1'));
 
-        totalInvoiceValue += inv.invoiceValue || 0;
-        totalTaxableValue += inv.taxableValue || 0;
-        totalIGST += inv.igst || 0;
-        totalCGST += inv.cgst || 0;
-        totalSGST += inv.sgst || 0;
-        totalCess += inv.cessAmount || 0;
-      });
+      // Add summary
+      b2bSheet.addRow(['No. of Recipients', '', 'No. of Invoices', '', 'Total Invoice Value']);
+      b2bSheet.getRow(2).eachCell((cell) => applySummaryStyle(cell));
+      b2bSheet.addRow([uniqueRecipients, '', b2bInvoices.length, '', b2bTotalInvoiceValue.toFixed(2)]);
 
-      // Add totals row
-      gstr1Data.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-      gstr1Data.push(['Total', '', '', '', '', totalInvoiceValue, '', '', totalTaxableValue, '', totalIGST, totalCGST, totalSGST, totalCess, '']);
+      // Empty row
+      b2bSheet.addRow([]);
 
-      const gstr1WS = XLSX.utils.aoa_to_sheet(gstr1Data);
-      XLSX.utils.book_append_sheet(workbook, gstr1WS, 'GSTR1 Report');
+      // Add header
+      const b2bHeaders = ['GSTIN/UIN of Recipient', 'Receiver Name', 'Invoice Number', 'Invoice date', 'Invoice Value', 'Place Of Supply', 'Reverse Charge', 'Applicable % of Tax Rate', 'Invoice Type'];
+      b2bSheet.addRow(b2bHeaders);
+      b2bSheet.getRow(5).eachCell((cell) => applyHeaderStyle(cell));
 
-      // B2B, SEZ, DE Sheet - Calculate B2B-specific totals
-      let b2bTotalInvoiceValue = 0;
-      let b2bTotalTaxableValue = 0;
-      let b2bTotalCess = 0;
-
-      const b2bSummaryData = [
-        ['Summary For B2B, SEZ, DE (4A, 4B, 6B, 6C)', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['No. of Recipients', '', 'No. of Invoices', '', 'Total Invoice Value', '', '', '', '', '', '', 'Total Taxable Value', 'Total Cess'],
-        ['', '', '', '', '', '', '', '', '', '', '', '', ''], // Will update after calculation
-        ['GSTIN/UIN of Recipient', 'Receiver Name', 'Invoice Number', 'Invoice date', 'Invoice Value', 'Place Of Supply', 'Reverse Charge', 'Applicable % of Tax Rate', 'Invoice Type', 'E-Commerce GSTIN', 'Rate', 'Taxable Value', 'Cess Amount']
-      ];
-
-      (reportData.b2bInvoices || []).forEach(inv => {
-        b2bTotalInvoiceValue += inv.invoiceValue || 0;
-        b2bTotalTaxableValue += inv.taxableValue || 0;
-        b2bTotalCess += inv.cessAmount || 0;
-        const invoiceDate = new Date(inv.invoiceDate);
-        const formattedDate = `${String(invoiceDate.getDate()).padStart(2, '0')}/${String(invoiceDate.getMonth() + 1).padStart(2, '0')}/${invoiceDate.getFullYear()}`;
-        b2bSummaryData.push([
+      // Add data
+      b2bInvoices.forEach(inv => {
+        const row = b2bSheet.addRow([
           inv.gstin || '',
           inv.customerName || '',
           inv.invoiceNumber || '',
-          formattedDate,
-          inv.invoiceValue || 0,
+          formatDate(inv.invoiceDate),
+          (inv.invoiceValue || 0).toFixed(2),
           inv.placeOfSupply || '',
           'N',
           '',
-          'Regular',
-          '',
-          inv.gstRate || 0,
-          inv.taxableValue || 0,
-          inv.cessAmount || 0
+          'Regular'
         ]);
+        row.eachCell((cell) => applyDataStyle(cell));
       });
 
-      // Update B2B summary row with calculated totals
-      b2bSummaryData[2] = [reportData.summary?.b2bCount || 0, '', (reportData.b2bInvoices || []).length, '', b2bTotalInvoiceValue, '', '', '', '', '', '', b2bTotalTaxableValue, b2bTotalCess];
+      // Set column widths
+      b2bSheet.columns = b2bHeaders.map(() => ({ width: 18 }));
 
-      const b2bWS = XLSX.utils.aoa_to_sheet(b2bSummaryData);
-      XLSX.utils.book_append_sheet(workbook, b2bWS, 'b2b,sez,de');
+      // ==================== SHEET 2: B2CL (5A, 5B) ====================
+      const b2clSheet = workbook.addWorksheet('b2cl');
+      const b2clInvoices = reportData.b2cLarge || [];
+      const b2clTotalInvoiceValue = b2clInvoices.reduce((sum, inv) => sum + (inv.invoiceValue || 0), 0);
 
-      // B2CL Sheet - Calculate B2C Large totals
-      let b2clTotalInvoiceValue = 0;
-      let b2clTotalTaxableValue = 0;
-      let b2clTotalCess = 0;
+      b2clSheet.addRow(['Summary For B2CL (5A, 5B)']);
+      applyTitleStyle(b2clSheet.getCell('A1'));
 
-      const b2clData = [
-        ['Summary For B2CL(5)', '', '', '', '', '', '', '', ''],
-        ['No. of Invoices', '', 'Total Invoice Value', '', '', '', 'Total Taxable Value', 'Total Cess', ''],
-        ['', '', '', '', '', '', '', '', ''], // Will update after calculation
-        ['Invoice Number', 'Invoice date', 'Invoice Value', 'Place Of Supply', 'Applicable % of Tax Rate', 'Rate', 'Taxable Value', 'Cess Amount', 'E-Commerce GSTIN']
-      ];
+      b2clSheet.addRow(['No. of Invoices', '', 'Total Invoice Value']);
+      b2clSheet.getRow(2).eachCell((cell) => applySummaryStyle(cell));
+      b2clSheet.addRow([b2clInvoices.length, '', b2clTotalInvoiceValue.toFixed(2)]);
 
-      (reportData.b2cLarge || []).forEach(inv => {
-        b2clTotalInvoiceValue += inv.invoiceValue || 0;
-        b2clTotalTaxableValue += inv.taxableValue || 0;
-        b2clTotalCess += inv.cessAmount || 0;
-        const invoiceDate = new Date(inv.invoiceDate);
-        const formattedDate = `${String(invoiceDate.getDate()).padStart(2, '0')}/${String(invoiceDate.getMonth() + 1).padStart(2, '0')}/${invoiceDate.getFullYear()}`;
-        b2clData.push([
+      b2clSheet.addRow([]);
+
+      const b2clHeaders = ['Invoice Number', 'Invoice date', 'Invoice Value', 'Place Of Supply', 'Applicable % of Tax Rate', 'Rate', 'Taxable Value', 'Cess Amount', 'E-Commerce GSTIN'];
+      b2clSheet.addRow(b2clHeaders);
+      b2clSheet.getRow(5).eachCell((cell) => applyHeaderStyle(cell));
+
+      b2clInvoices.forEach(inv => {
+        const row = b2clSheet.addRow([
           inv.invoiceNumber || '',
-          formattedDate,
-          inv.invoiceValue || 0,
+          formatDate(inv.invoiceDate),
+          (inv.invoiceValue || 0).toFixed(2),
           inv.placeOfSupply || '',
           '',
           inv.gstRate || 0,
-          inv.taxableValue || 0,
-          inv.cessAmount || 0,
+          (inv.taxableValue || 0).toFixed(2),
+          (inv.cessAmount || 0).toFixed(2),
           ''
         ]);
+        row.eachCell((cell) => applyDataStyle(cell));
       });
 
-      // Update B2CL summary row with calculated totals
-      b2clData[2] = [(reportData.b2cLarge || []).length, '', b2clTotalInvoiceValue, '', '', '', b2clTotalTaxableValue, b2clTotalCess, ''];
+      b2clSheet.columns = b2clHeaders.map(() => ({ width: 18 }));
 
-      const b2clWS = XLSX.utils.aoa_to_sheet(b2clData);
-      XLSX.utils.book_append_sheet(workbook, b2clWS, 'b2cl');
+      // ==================== SHEET 3: B2CS (7) ====================
+      const b2csSheet = workbook.addWorksheet('b2cs');
+      const b2csInvoices = reportData.b2cSmall || [];
 
-      // B2CS Sheet - Group by rate and place of supply
       const b2csGrouped = {};
-      (reportData.b2cSmall || []).forEach(inv => {
+      b2csInvoices.forEach(inv => {
         const key = `${inv.gstRate || 0}_${inv.placeOfSupply || ''}`;
         if (!b2csGrouped[key]) {
           b2csGrouped[key] = {
@@ -322,54 +815,136 @@ export default function ReportsPage() {
       const b2csTotalTaxable = Object.values(b2csGrouped).reduce((sum, item) => sum + item.taxableValue, 0);
       const b2csTotalCess = Object.values(b2csGrouped).reduce((sum, item) => sum + item.cessAmount, 0);
 
-      const b2csData = [
-        ['Summary For B2CS(7)', '', '', '', '', '', '', '', ''],
-        ['', '', '', '', 'Total Taxable Value', 'Total Cess', '', '', ''],
-        ['', '', '', '', b2csTotalTaxable, b2csTotalCess, '', '', ''],
-        ['Type', 'Place Of Supply', 'Applicable % of Tax Rate', 'Rate', 'Taxable Value', 'Cess Amount', 'E-Commerce GSTIN', '', '']
-      ];
+      b2csSheet.addRow(['Summary For B2CS (7)']);
+      applyTitleStyle(b2csSheet.getCell('A1'));
+
+      b2csSheet.addRow(['Total Taxable Value', '', 'Total Cess']);
+      b2csSheet.getRow(2).eachCell((cell) => applySummaryStyle(cell));
+      b2csSheet.addRow([b2csTotalTaxable.toFixed(2), '', b2csTotalCess.toFixed(2)]);
+
+      b2csSheet.addRow([]);
+
+      const b2csHeaders = ['Type', 'Place Of Supply', 'Applicable % of Tax Rate', 'Rate', 'Taxable Value', 'Cess Amount', 'E-Commerce GSTIN'];
+      b2csSheet.addRow(b2csHeaders);
+      b2csSheet.getRow(5).eachCell((cell) => applyHeaderStyle(cell));
 
       Object.values(b2csGrouped).forEach(item => {
-        b2csData.push([
+        const row = b2csSheet.addRow([
           'OE',
           item.placeOfSupply,
           '',
           item.rate,
-          item.taxableValue,
-          item.cessAmount,
-          '',
-          '',
+          item.taxableValue.toFixed(2),
+          item.cessAmount.toFixed(2),
           ''
         ]);
+        row.eachCell((cell) => applyDataStyle(cell));
       });
 
-      const b2csWS = XLSX.utils.aoa_to_sheet(b2csData);
-      XLSX.utils.book_append_sheet(workbook, b2csWS, 'b2cs');
+      b2csSheet.columns = b2csHeaders.map(() => ({ width: 18 }));
 
-      // Exempt Sheet
-      const exempData = [
-        ['Summary For Nil rated, exempted and non GST outward supplies (8)', '', '', ''],
-        ['', 'Total Nil Rated Supplies', 'Total Exempted Supplies', 'Total Non-GST Supplies'],
-        ['', 0, 0, 0],
-        ['Description', 'Nil Rated Supplies', 'Exempted(other than nil rated/non GST supply)', 'Non-GST Supplies'],
-        ['Inter-State supplies to registered persons', 0, 0, 0],
-        ['Intra-State supplies to registered persons', 0, 0, 0],
-        ['Inter-State supplies to unregistered persons', 0, 0, 0],
-        ['Intra-State supplies to unregistered persons', 0, 0, 0]
-      ];
+      // ==================== SHEET 4: CDNR (9B - Registered) ====================
+      const cdnrSheet = workbook.addWorksheet('cdnr');
+      const cdnrNotes = (reportData.creditNotes || []).filter(note => note.customerGstin && note.customerGstin.trim() !== '');
+      const cdnrTotalNoteValue = cdnrNotes.reduce((sum, note) => sum + (note.grandTotal || 0), 0);
 
-      const exempWS = XLSX.utils.aoa_to_sheet(exempData);
-      XLSX.utils.book_append_sheet(workbook, exempWS, 'exemp');
+      cdnrSheet.addRow(['Summary For CDNR (9B) - Credit/Debit Notes (Registered)']);
+      applyTitleStyle(cdnrSheet.getCell('A1'));
 
-      // HSN Summary - Group all invoices by HSN
+      cdnrSheet.addRow(['No. of Notes', '', 'Total Note Value']);
+      cdnrSheet.getRow(2).eachCell((cell) => applySummaryStyle(cell));
+      cdnrSheet.addRow([cdnrNotes.length, '', cdnrTotalNoteValue.toFixed(2)]);
+
+      cdnrSheet.addRow([]);
+
+      const cdnrHeaders = ['GSTIN/UIN of Recipient', 'Receiver Name', 'Note Number', 'Note Date', 'Note Type', 'Reason', 'Original Invoice Number', 'Original Invoice Date', 'Note Value', 'Rate', 'Taxable Value', 'IGST', 'CGST', 'SGST'];
+      cdnrSheet.addRow(cdnrHeaders);
+      cdnrSheet.getRow(5).eachCell((cell) => applyHeaderStyle(cell));
+
+      cdnrNotes.forEach(note => {
+        const row = cdnrSheet.addRow([
+          note.customerGstin || '',
+          note.customerName || '',
+          note.creditNoteNumber || '',
+          formatDate(note.returnDate),
+          'C',
+          note.reason || 'Sales Return',
+          note.originalInvoiceNumber || '',
+          note.originalInvoiceDate ? formatDate(note.originalInvoiceDate) : '',
+          (note.grandTotal || 0).toFixed(2),
+          note.gstRate || 0,
+          (note.subtotal || 0).toFixed(2),
+          (note.totalIGST || 0).toFixed(2),
+          (note.totalCGST || 0).toFixed(2),
+          (note.totalSGST || 0).toFixed(2)
+        ]);
+        row.eachCell((cell) => applyDataStyle(cell));
+      });
+
+      cdnrSheet.columns = cdnrHeaders.map(() => ({ width: 18 }));
+
+      // ==================== SHEET 5: CDNUR (9B - Unregistered) ====================
+      const cdnurSheet = workbook.addWorksheet('cdnur');
+      const cdnurNotes = (reportData.creditNotes || []).filter(note => !note.customerGstin || note.customerGstin.trim() === '');
+      const cdnurTotalNoteValue = cdnurNotes.reduce((sum, note) => sum + (note.grandTotal || 0), 0);
+
+      cdnurSheet.addRow(['Summary For CDNUR (9B) - Credit/Debit Notes (Unregistered)']);
+      applyTitleStyle(cdnurSheet.getCell('A1'));
+
+      cdnurSheet.addRow(['No. of Notes', '', 'Total Note Value']);
+      cdnurSheet.getRow(2).eachCell((cell) => applySummaryStyle(cell));
+      cdnurSheet.addRow([cdnurNotes.length, '', cdnurTotalNoteValue.toFixed(2)]);
+
+      cdnurSheet.addRow([]);
+
+      const cdnurHeaders = ['Note Number', 'Note Date', 'Note Type', 'Reason', 'Original Invoice Number', 'Original Invoice Date', 'Note Value', 'Rate', 'Taxable Value', 'IGST', 'CGST', 'SGST'];
+      cdnurSheet.addRow(cdnurHeaders);
+      cdnurSheet.getRow(5).eachCell((cell) => applyHeaderStyle(cell));
+
+      cdnurNotes.forEach(note => {
+        const row = cdnurSheet.addRow([
+          note.creditNoteNumber || '',
+          formatDate(note.returnDate),
+          'C',
+          note.reason || 'Sales Return',
+          note.originalInvoiceNumber || '',
+          note.originalInvoiceDate ? formatDate(note.originalInvoiceDate) : '',
+          (note.grandTotal || 0).toFixed(2),
+          note.gstRate || 0,
+          (note.subtotal || 0).toFixed(2),
+          (note.totalIGST || 0).toFixed(2),
+          (note.totalCGST || 0).toFixed(2),
+          (note.totalSGST || 0).toFixed(2)
+        ]);
+        row.eachCell((cell) => applyDataStyle(cell));
+      });
+
+      cdnurSheet.columns = cdnurHeaders.map(() => ({ width: 18 }));
+
+      // ==================== SHEET 6: EXP (6A - Exports) ====================
+      const expSheet = workbook.addWorksheet('exp');
+
+      expSheet.addRow(['Summary For EXP (6A) - Exports']);
+      applyTitleStyle(expSheet.getCell('A1'));
+
+      expSheet.addRow(['No. of Invoices', '', 'Total Invoice Value']);
+      expSheet.getRow(2).eachCell((cell) => applySummaryStyle(cell));
+      expSheet.addRow([0, '', '0.00']);
+
+      expSheet.addRow([]);
+
+      const expHeaders = ['Export Type', 'Invoice Number', 'Invoice Date', 'Invoice Value', 'Port Code', 'Shipping Bill Number', 'Shipping Bill Date', 'Rate', 'Taxable Value'];
+      expSheet.addRow(expHeaders);
+      expSheet.getRow(5).eachCell((cell) => applyHeaderStyle(cell));
+
+      expSheet.columns = expHeaders.map(() => ({ width: 18 }));
+
+      // ==================== SHEET 7: HSN (12 - HSN Summary) ====================
+      const hsnSheet = workbook.addWorksheet('hsn');
       const hsnGrouped = {};
-
-      console.log('All invoices for HSN:', allInvoices.length);
-      console.log('Sample invoice items:', allInvoices[0]?.items);
 
       allInvoices.forEach(invoice => {
         if (invoice.items && invoice.items.length > 0) {
-          // If items are embedded in the invoice (from backend)
           invoice.items.forEach(item => {
             const hsn = item.hsnCode || 'N/A';
             if (!hsnGrouped[hsn]) {
@@ -406,60 +981,80 @@ export default function ReportsPage() {
       const hsnTotalSGST = hsnList.reduce((sum, hsn) => sum + hsn.sgst, 0);
       const hsnTotalCess = hsnList.reduce((sum, hsn) => sum + hsn.cess, 0);
 
-      // HSN(B2B) Sheet
-      const hsnb2bData = [
-        ['Summary For HSN(12)', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        ['No. of HSN', '', '', '', 'Total Value', '', 'Total Taxable Value', 'Total Integrated Tax', 'Total Central Tax', 'Total State/UT Tax', 'Total Cess', '', '', ''],
-        [hsnList.length, '', '', '', hsnTotalValue, '', hsnTotalTaxableValue, hsnTotalIGST, hsnTotalCGST, hsnTotalSGST, hsnTotalCess, '', '', ''],
-        ['HSN', 'Description', 'UQC', 'Total Quantity', 'Total Value', 'Rate', 'Taxable Value', 'Integrated Tax Amount', 'Central Tax Amount', 'State/UT Tax Amount', 'Cess Amount', '', '', '']
-      ];
+      hsnSheet.addRow(['Summary For HSN (12)']);
+      applyTitleStyle(hsnSheet.getCell('A1'));
+
+      hsnSheet.addRow(['No. of HSN', '', 'Total Value', '', 'Total Taxable Value', 'Total Integrated Tax', 'Total Central Tax', 'Total State/UT Tax', 'Total Cess']);
+      hsnSheet.getRow(2).eachCell((cell) => applySummaryStyle(cell));
+      hsnSheet.addRow([hsnList.length, '', hsnTotalValue.toFixed(2), '', hsnTotalTaxableValue.toFixed(2), hsnTotalIGST.toFixed(2), hsnTotalCGST.toFixed(2), hsnTotalSGST.toFixed(2), hsnTotalCess.toFixed(2)]);
+
+      hsnSheet.addRow([]);
+
+      const hsnHeaders = ['HSN', 'Description', 'UQC', 'Total Quantity', 'Total Value', 'Rate', 'Taxable Value', 'Integrated Tax Amount', 'Central Tax Amount', 'State/UT Tax Amount', 'Cess Amount'];
+      hsnSheet.addRow(hsnHeaders);
+      hsnSheet.getRow(5).eachCell((cell) => applyHeaderStyle(cell));
 
       hsnList.forEach(hsn => {
-        hsnb2bData.push([
+        const row = hsnSheet.addRow([
           hsn.hsnCode,
           hsn.description,
           hsn.uqc,
           hsn.totalQuantity,
-          hsn.totalValue,
+          hsn.totalValue.toFixed(2),
           hsn.gstRate,
-          hsn.taxableValue,
-          hsn.igst,
-          hsn.cgst,
-          hsn.sgst,
-          hsn.cess,
-          '',
-          '',
-          ''
+          hsn.taxableValue.toFixed(2),
+          hsn.igst.toFixed(2),
+          hsn.cgst.toFixed(2),
+          hsn.sgst.toFixed(2),
+          hsn.cess.toFixed(2)
         ]);
+        row.eachCell((cell) => applyDataStyle(cell));
       });
 
-      const hsnb2bWS = XLSX.utils.aoa_to_sheet(hsnb2bData);
-      XLSX.utils.book_append_sheet(workbook, hsnb2bWS, 'hsn(b2b)');
+      hsnSheet.columns = hsnHeaders.map(() => ({ width: 18 }));
 
-      // HSN(B2C) Sheet - Same as B2B for simplicity
-      const hsnb2cWS = XLSX.utils.aoa_to_sheet(hsnb2bData);
-      XLSX.utils.book_append_sheet(workbook, hsnb2cWS, 'hsn(b2c)');
-
-      // Item Summary Sheet - Same as HSN
-      const itemSummaryWS = XLSX.utils.aoa_to_sheet(hsnb2bData);
-      XLSX.utils.book_append_sheet(workbook, itemSummaryWS, 'itemSummary');
-
-      // Docs Sheet
+      // ==================== SHEET 8: DOCS (13 - Documents Issued) ====================
+      const docsSheet = workbook.addWorksheet('docs');
       const firstInvoice = allInvoices.length > 0 ? allInvoices[0].invoiceNumber : '';
       const lastInvoice = allInvoices.length > 0 ? allInvoices[allInvoices.length - 1].invoiceNumber : '';
+      const totalCreditNotes = (reportData.creditNotes || []).length;
+      const firstCreditNote = totalCreditNotes > 0 ? reportData.creditNotes[0].creditNoteNumber : '';
+      const lastCreditNote = totalCreditNotes > 0 ? reportData.creditNotes[totalCreditNotes - 1].creditNoteNumber : '';
+
+      docsSheet.addRow(['Summary of documents issued during the tax period (13)']);
+      applyTitleStyle(docsSheet.getCell('A1'));
+
+      const docsHeaders = ['Nature of Document', 'Sr. No. From', 'Sr. No. To', 'Total Number', 'Cancelled'];
+      docsSheet.addRow(docsHeaders);
+      docsSheet.getRow(2).eachCell((cell) => applyHeaderStyle(cell));
 
       const docsData = [
-        ['Summary of documents issued during the tax period (13)', '', '', '', ''],
-        ['', '', '', 'Total Number', 'Total Cancelled'],
-        ['', '', '', allInvoices.length, '0'],
-        ['Nature of Document', 'Sr. No. From', 'Sr. No. To', 'Total Number', 'Cancelled'],
-        ['Invoices for outward supply', firstInvoice, lastInvoice, allInvoices.length.toString(), '0']
+        ['Invoices for outward supply', firstInvoice, lastInvoice, allInvoices.length, 0],
+        ['Credit Notes', firstCreditNote, lastCreditNote, totalCreditNotes, 0],
+        ['Debit Notes', '', '', 0, 0]
       ];
 
-      const docsWS = XLSX.utils.aoa_to_sheet(docsData);
-      XLSX.utils.book_append_sheet(workbook, docsWS, 'docs');
+      docsData.forEach(data => {
+        const row = docsSheet.addRow(data);
+        row.eachCell((cell) => applyDataStyle(cell));
+      });
+
+      docsSheet.columns = docsHeaders.map(() => ({ width: 25 }));
+
+      // Write file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${reportName}_${dateStr}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
     else if (activeTab === 'gstr3b') {
+      const workbook = XLSX.utils.book_new();
       const gstr3bData = [
         ['GSTR-3B Report'],
         ['Period', `${dateRange.startDate} to ${dateRange.endDate}`],
@@ -502,6 +1097,7 @@ export default function ReportsPage() {
       XLSX.utils.book_append_sheet(workbook, gstr3bWS, 'GSTR-3B');
     }
     else if (activeTab === 'taxSummary') {
+      const workbook = XLSX.utils.book_new();
       // Sales Tax sheet
       const salesData = Object.entries(reportData.salesTaxByRate).map(([rate, data]) => ({
         'GST Rate': `${rate}%`,
@@ -542,6 +1138,7 @@ export default function ReportsPage() {
       XLSX.utils.book_append_sheet(workbook, summaryWS, 'Summary');
     }
     else if (activeTab === 'hsnSummary') {
+      const workbook = XLSX.utils.book_new();
       const hsnData = reportData.hsnList.map(hsn => ({
         'HSN Code': hsn.hsnCode,
         'Description': hsn.description,
@@ -711,8 +1308,8 @@ export default function ReportsPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                 >
                   <div className="flex flex-col items-center">
