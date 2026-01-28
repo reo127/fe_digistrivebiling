@@ -196,17 +196,83 @@ export default function ReportsPage() {
     // Helper: Get state code from place of supply
     const getStateCode = (placeOfSupply) => {
       if (!placeOfSupply) return shop.stateCode || "29"; // Default to Karnataka
-      // Extract numeric code if format is "29-Karnataka"
-      const match = placeOfSupply.match(/^(\d+)/);
-      return match ? match[1] : placeOfSupply;
+
+      // State name to code mapping
+      const stateCodeMap = {
+        'JAMMU AND KASHMIR': '01',
+        'HIMACHAL PRADESH': '02',
+        'PUNJAB': '03',
+        'CHANDIGARH': '04',
+        'UTTARAKHAND': '05',
+        'HARYANA': '06',
+        'DELHI': '07',
+        'RAJASTHAN': '08',
+        'UTTAR PRADESH': '09',
+        'BIHAR': '10',
+        'SIKKIM': '11',
+        'ARUNACHAL PRADESH': '12',
+        'NAGALAND': '13',
+        'MANIPUR': '14',
+        'MIZORAM': '15',
+        'TRIPURA': '16',
+        'MEGHALAYA': '17',
+        'ASSAM': '18',
+        'WEST BENGAL': '19',
+        'JHARKHAND': '20',
+        'ODISHA': '21',
+        'CHATTISGARH': '22',
+        'MADHYA PRADESH': '23',
+        'GUJARAT': '24',
+        'DAMAN AND DIU': '25',
+        'DADRA AND NAGAR HAVELI': '26',
+        'MAHARASHTRA': '27',
+        'ANDHRA PRADESH': '28',
+        'KARNATAKA': '29',
+        'GOA': '30',
+        'LAKSHADWEEP': '31',
+        'KERALA': '32',
+        'TAMIL NADU': '33',
+        'PUDUCHERRY': '34',
+        'ANDAMAN AND NICOBAR ISLANDS': '35',
+        'TELANGANA': '36',
+        'ANDHRA PRADESH (NEW)': '37',
+        'LADAKH': '38'
+      };
+
+      // Extract numeric code if format is "29-Karnataka" or "29"
+      const numericMatch = placeOfSupply.match(/^(\d+)/);
+      if (numericMatch) {
+        return numericMatch[1].padStart(2, '0');
+      }
+
+      // Try to match state name (case-insensitive)
+      const stateName = placeOfSupply.toUpperCase().trim();
+      if (stateCodeMap[stateName]) {
+        return stateCodeMap[stateName];
+      }
+
+      // If no match found, return default or original value
+      console.warn(`Unknown state: ${placeOfSupply}, using default state code`);
+      return shop.stateCode || "29";
+    };
+
+    // Helper to extract numeric part from invoice number
+    const getNumericInvoiceNumber = (invoiceNum) => {
+      if (!invoiceNum) return '';
+      // Extract last numeric part (e.g., "INV-2025-DI-000001" -> "01")
+      const match = invoiceNum.match(/(\d+)$/);
+      if (match) {
+        // Remove leading zeros and return
+        return String(parseInt(match[1], 10)).padStart(2, '0');
+      }
+      return invoiceNum;
     };
 
     // Initialize GST Portal structure with mandatory fields
     const gstr1 = {
       gstin: shop.gstin,
-      fp: getFinancialPeriod(dateRange.endDate),
-      gt: data.summary?.totalInvoiceValue || 0,
-      cur_gt: data.summary?.totalInvoiceValue || 0
+      fp: getFinancialPeriod(dateRange.endDate)
+      // Removed gt and cur_gt as per GST Portal requirements
     };
 
     // Transform B2B Invoices (Business to Business)
@@ -234,7 +300,7 @@ export default function ReportsPage() {
 
       // Transform invoice
       const gstInvoice = {
-        inum: inv.invoiceNumber,
+        inum: getNumericInvoiceNumber(inv.invoiceNumber),
         idt: formatGSTDate(inv.invoiceDate),
         val: parseFloat((inv.invoiceValue || 0).toFixed(2)),
         pos: getStateCode(inv.placeOfSupply),
@@ -249,8 +315,8 @@ export default function ReportsPage() {
           gstInvoice.itms.push({
             num: idx + 1,
             itm_det: {
-              rt: parseFloat(item.gstRate || 0),
               txval: parseFloat((item.taxableAmount || item.taxableValue || 0).toFixed(2)),
+              rt: parseFloat(item.gstRate || 0),
               iamt: parseFloat((item.igst || 0).toFixed(2)),
               camt: parseFloat((item.cgst || 0).toFixed(2)),
               samt: parseFloat((item.sgst || 0).toFixed(2)),
@@ -263,8 +329,8 @@ export default function ReportsPage() {
         gstInvoice.itms.push({
           num: 1,
           itm_det: {
-            rt: parseFloat(inv.gstRate || 0),
             txval: parseFloat((inv.taxableValue || 0).toFixed(2)),
+            rt: parseFloat(inv.gstRate || 0),
             iamt: parseFloat((inv.igst || 0).toFixed(2)),
             camt: parseFloat((inv.cgst || 0).toFixed(2)),
             samt: parseFloat((inv.sgst || 0).toFixed(2)),
@@ -300,14 +366,14 @@ export default function ReportsPage() {
       b2clData.push({
         pos: getStateCode(inv.placeOfSupply),
         inv: [{
-          inum: inv.invoiceNumber,
+          inum: getNumericInvoiceNumber(inv.invoiceNumber),
           idt: formatGSTDate(inv.invoiceDate),
           val: parseFloat((inv.invoiceValue || 0).toFixed(2)),
           itms: [{
             num: 1,
             itm_det: {
-              rt: parseFloat(inv.gstRate || 0),
               txval: parseFloat((inv.taxableValue || 0).toFixed(2)),
+              rt: parseFloat(inv.gstRate || 0),
               iamt: parseFloat((inv.igst || 0).toFixed(2)),
               camt: parseFloat((inv.cgst || 0).toFixed(2)),
               samt: parseFloat((inv.sgst || 0).toFixed(2)),
@@ -336,11 +402,11 @@ export default function ReportsPage() {
           pos: getStateCode(inv.placeOfSupply),
           typ: "OE", // Other than exports
           txval: 0,
+          rt: parseFloat(inv.gstRate || 0),
           iamt: 0,
           camt: 0,
           samt: 0,
-          csamt: 0,
-          rt: parseFloat(inv.gstRate || 0)
+          csamt: 0
         };
       }
 
@@ -425,11 +491,69 @@ export default function ReportsPage() {
       csamt: parseFloat(item.csamt.toFixed(2))
     }));
 
+    // Separate HSN data into B2B and B2C
+    const hsnB2B = [];
+    const hsnB2C = [];
+
+    // Group by invoice type
+    const b2bInvoiceNumbers = new Set((data.b2bInvoices || []).map(inv => inv.invoiceNumber));
+
+    allInvoices.forEach(inv => {
+      const isB2B = b2bInvoiceNumbers.has(inv.invoiceNumber);
+
+      if (inv.items && inv.items.length > 0) {
+        inv.items.forEach(item => {
+          const hsn = item.hsnCode || item.hsn || 'N/A';
+          if (hsn === 'N/A' || !hsn) return;
+
+          const targetArray = isB2B ? hsnB2B : hsnB2C;
+          let hsnEntry = targetArray.find(h => h.hsn_sc === hsn && h.rt === parseFloat(item.gstRate || 0));
+
+          if (!hsnEntry) {
+            hsnEntry = {
+              num: targetArray.length + 1,
+              hsn_sc: hsn,
+              txval: 0,
+              rt: parseFloat(item.gstRate || 0),
+              iamt: 0,
+              camt: 0,
+              samt: 0,
+              csamt: 0,
+              uqc: item.unit || item.uqc || 'PCS',
+              qty: 0
+            };
+            targetArray.push(hsnEntry);
+          }
+
+          hsnEntry.qty += parseFloat(item.quantity || 0);
+          hsnEntry.txval += parseFloat(item.taxableAmount || item.taxableValue || 0);
+          hsnEntry.iamt += parseFloat(item.igst || 0);
+          hsnEntry.camt += parseFloat(item.cgst || 0);
+          hsnEntry.samt += parseFloat(item.sgst || 0);
+          hsnEntry.csamt += parseFloat(item.cessAmount || 0);
+        });
+      }
+    });
+
+    // Round values and renumber
+    const roundHsnValues = (arr) => arr.map((item, idx) => ({
+      num: idx + 1,
+      hsn_sc: item.hsn_sc,
+      txval: parseFloat(item.txval.toFixed(2)),
+      rt: item.rt,
+      iamt: parseFloat(item.iamt.toFixed(2)),
+      camt: parseFloat(item.camt.toFixed(2)),
+      samt: parseFloat(item.samt.toFixed(2)),
+      csamt: parseFloat(item.csamt.toFixed(2)),
+      uqc: item.uqc,
+      qty: parseFloat(item.qty.toFixed(0))
+    }));
+
     // Only add hsn section if it has data
-    if (hsnArray.length > 0) {
-      gstr1.hsn = {
-        data: hsnArray
-      };
+    if (hsnB2B.length > 0 || hsnB2C.length > 0) {
+      gstr1.hsn = {};
+      if (hsnB2B.length > 0) gstr1.hsn.hsn_b2b = roundHsnValues(hsnB2B);
+      if (hsnB2C.length > 0) gstr1.hsn.hsn_b2c = roundHsnValues(hsnB2C);
     }
 
     // CDNR - Credit/Debit Notes (Registered - B2B)
@@ -452,19 +576,19 @@ export default function ReportsPage() {
       }
 
       cdnrByGstin[note.customerGstin].push({
-        nt_num: note.creditNoteNumber,
+        ntty: "C", // C for Credit Note, D for Debit Note (moved to first)
+        nt_num: getNumericInvoiceNumber(note.creditNoteNumber),
         nt_dt: formatGSTDate(note.returnDate),
-        ntty: "C", // C for Credit Note, D for Debit Note
-        rsn: note.reason || "Sales Return",
+        rsn: "Sales Return", // Always use 'Sales Return' instead of note.reason
         p_gst: "N", // Pre-GST
-        inum: note.originalInvoiceNumber || "",
+        inum: getNumericInvoiceNumber(note.originalInvoiceNumber || ""),
         idt: note.originalInvoiceDate ? formatGSTDate(note.originalInvoiceDate) : "",
         val: parseFloat((note.grandTotal || 0).toFixed(2)),
         itms: note.items ? note.items.map((item, idx) => ({
           num: idx + 1,
           itm_det: {
-            rt: parseFloat(item.gstRate || 0),
             txval: parseFloat((item.taxableAmount || 0).toFixed(2)),
+            rt: parseFloat(item.gstRate || 0),
             iamt: parseFloat((item.igst || 0).toFixed(2)),
             camt: parseFloat((item.cgst || 0).toFixed(2)),
             samt: parseFloat((item.sgst || 0).toFixed(2)),
@@ -473,8 +597,8 @@ export default function ReportsPage() {
         })) : [{
           num: 1,
           itm_det: {
-            rt: parseFloat(note.gstRate || 0),
             txval: parseFloat((note.subtotal || 0).toFixed(2)),
+            rt: parseFloat(note.gstRate || 0),
             iamt: parseFloat((note.totalIGST || 0).toFixed(2)),
             camt: parseFloat((note.totalCGST || 0).toFixed(2)),
             samt: parseFloat((note.totalSGST || 0).toFixed(2)),
@@ -511,20 +635,20 @@ export default function ReportsPage() {
       }
 
       cdnurData.push({
-        typ: "B2CL", // B2CL for large invoices, B2CS for small
-        nt_num: note.creditNoteNumber,
+        ntty: "C", // C for Credit Note (moved to first)
+        nt_num: getNumericInvoiceNumber(note.creditNoteNumber),
         nt_dt: formatGSTDate(note.returnDate),
-        ntty: "C", // C for Credit Note
-        rsn: note.reason || "Sales Return",
+        typ: "B2CL", // B2CL for large invoices, B2CS for small
+        rsn: "Sales Return", // Always use 'Sales Return'
         p_gst: "N",
-        inum: note.originalInvoiceNumber || "",
+        inum: getNumericInvoiceNumber(note.originalInvoiceNumber || ""),
         idt: note.originalInvoiceDate ? formatGSTDate(note.originalInvoiceDate) : "",
         val: parseFloat((note.grandTotal || 0).toFixed(2)),
         itms: note.items ? note.items.map((item, idx) => ({
           num: idx + 1,
           itm_det: {
-            rt: parseFloat(item.gstRate || 0),
             txval: parseFloat((item.taxableAmount || 0).toFixed(2)),
+            rt: parseFloat(item.gstRate || 0),
             iamt: parseFloat((item.igst || 0).toFixed(2)),
             camt: parseFloat((item.cgst || 0).toFixed(2)),
             samt: parseFloat((item.sgst || 0).toFixed(2)),
@@ -533,8 +657,8 @@ export default function ReportsPage() {
         })) : [{
           num: 1,
           itm_det: {
-            rt: parseFloat(note.gstRate || 0),
             txval: parseFloat((note.subtotal || 0).toFixed(2)),
+            rt: parseFloat(note.gstRate || 0),
             iamt: parseFloat((note.totalIGST || 0).toFixed(2)),
             camt: parseFloat((note.totalCGST || 0).toFixed(2)),
             samt: parseFloat((note.totalSGST || 0).toFixed(2)),
@@ -552,10 +676,10 @@ export default function ReportsPage() {
     // NIL - Nil Rated, Exempted and Non-GST Supplies
     const nilSupplies = {
       inv: [
+        { sply_ty: "INTRAB2B", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
+        { sply_ty: "INTRAB2C", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
         { sply_ty: "INTRB2B", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
-        { sply_ty: "INTRB2C", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
-        { sply_ty: "INTERB2B", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 },
-        { sply_ty: "INTERB2C", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 }
+        { sply_ty: "INTRB2C", nil_amt: 0, expt_amt: 0, ngsup_amt: 0 }
       ]
     };
 
@@ -570,10 +694,10 @@ export default function ReportsPage() {
         const isInterState = inv.taxType === 'IGST' || (inv.totalIGST || 0) > 0;
 
         let supplyType;
-        if (isInterState && hasGstin) supplyType = "INTERB2B";
-        else if (isInterState && !hasGstin) supplyType = "INTERB2C";
-        else if (!isInterState && hasGstin) supplyType = "INTRB2B";
-        else supplyType = "INTRB2C";
+        if (isInterState && hasGstin) supplyType = "INTRB2B";
+        else if (isInterState && !hasGstin) supplyType = "INTRB2C";
+        else if (!isInterState && hasGstin) supplyType = "INTRAB2B";
+        else supplyType = "INTRAB2C";
 
         const supplyIndex = nilSupplies.inv.findIndex(s => s.sply_ty === supplyType);
         if (supplyIndex !== -1) {
@@ -608,11 +732,10 @@ export default function ReportsPage() {
     if (invoiceNumbers.length > 0) {
       docIssue.doc_det.push({
         doc_num: 1,
-        doc_typ: "Invoices for outward supply",
         docs: [{
           num: 1,
-          from: invoiceNumbers[0],
-          to: invoiceNumbers[invoiceNumbers.length - 1],
+          from: getNumericInvoiceNumber(invoiceNumbers[0]),
+          to: getNumericInvoiceNumber(invoiceNumbers[invoiceNumbers.length - 1]),
           totnum: invoiceNumbers.length,
           cancel: 0,
           net_issue: invoiceNumbers.length
@@ -624,11 +747,10 @@ export default function ReportsPage() {
     if (creditNoteNumbers.length > 0) {
       docIssue.doc_det.push({
         doc_num: 2,
-        doc_typ: "Credit Notes",
         docs: [{
           num: 1,
-          from: creditNoteNumbers[0],
-          to: creditNoteNumbers[creditNoteNumbers.length - 1],
+          from: getNumericInvoiceNumber(creditNoteNumbers[0]),
+          to: getNumericInvoiceNumber(creditNoteNumbers[creditNoteNumbers.length - 1]),
           totnum: creditNoteNumbers.length,
           cancel: 0,
           net_issue: creditNoteNumbers.length
