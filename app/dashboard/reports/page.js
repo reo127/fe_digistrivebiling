@@ -576,14 +576,13 @@ export default function ReportsPage() {
       }
 
       cdnrByGstin[note.customerGstin].push({
-        ntty: "C", // C for Credit Note, D for Debit Note (moved to first)
+        val: parseFloat((note.grandTotal || 0).toFixed(2)),
+        ntty: "C", // C for Credit Note, D for Debit Note
         nt_num: getNumericInvoiceNumber(note.creditNoteNumber),
         nt_dt: formatGSTDate(note.returnDate),
-        rsn: "Sales Return", // Always use 'Sales Return' instead of note.reason
-        p_gst: "N", // Pre-GST
-        inum: getNumericInvoiceNumber(note.originalInvoiceNumber || ""),
-        idt: note.originalInvoiceDate ? formatGSTDate(note.originalInvoiceDate) : "",
-        val: parseFloat((note.grandTotal || 0).toFixed(2)),
+        pos: getStateCode(note.placeOfSupply || shop.state),
+        rchrg: "N", // Reverse charge
+        inv_typ: "R", // Regular invoice type
         itms: note.items ? note.items.map((item, idx) => ({
           num: idx + 1,
           itm_det: {
@@ -635,15 +634,13 @@ export default function ReportsPage() {
       }
 
       cdnurData.push({
-        ntty: "C", // C for Credit Note (moved to first)
+        val: parseFloat((note.grandTotal || 0).toFixed(2)),
+        ntty: "C", // C for Credit Note
         nt_num: getNumericInvoiceNumber(note.creditNoteNumber),
         nt_dt: formatGSTDate(note.returnDate),
-        typ: "B2CL", // B2CL for large invoices, B2CS for small
-        rsn: "Sales Return", // Always use 'Sales Return'
-        p_gst: "N",
-        inum: getNumericInvoiceNumber(note.originalInvoiceNumber || ""),
-        idt: note.originalInvoiceDate ? formatGSTDate(note.originalInvoiceDate) : "",
-        val: parseFloat((note.grandTotal || 0).toFixed(2)),
+        pos: getStateCode(note.placeOfSupply || shop.state),
+        rchrg: "N", // Reverse charge
+        inv_typ: "R", // Regular invoice type
         itms: note.items ? note.items.map((item, idx) => ({
           num: idx + 1,
           itm_det: {
