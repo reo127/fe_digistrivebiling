@@ -88,7 +88,7 @@ export default function Dashboard() {
                   Welcome back, {user.name}!
                   <span className="ml-3 animate-bounce">👋</span>
                 </h1>
-                <p className="text-emerald-100 text-lg">Here&apos;s what&apos;s happening with your store today.</p>
+                <p className="text-emerald-100 text-lg">Here&apos;s what&apos;s happening with your store today 😊.</p>
               </div>
               <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
                 <HiCheckCircle className="w-5 h-5 text-green-300" />
