@@ -542,7 +542,7 @@ export default function NewPurchasePage() {
 
             {formData.items.length === 0 ? (
               <div className={`text-center py-8 ${errors.items ? 'text-red-500 bg-red-50 border border-red-200 rounded-lg' : 'text-gray-500'}`}>
-                No items added. Click "Add Item" to start.
+                No items added. Click Add Item to start.
               </div>
             ) : (
               <div className="space-y-4">
@@ -568,13 +568,12 @@ export default function NewPurchasePage() {
                           <select
                             value={item.product}
                             onChange={(e) => handleProductSelect(index, e.target.value)}
-
                             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                           >
                             <option value="">Select Product</option>
                             {products.map((product) => (
-                              <option key={product._id} value={product._id}>
-                                {product.name}
+                              <option key={product._id} value={product._id} title={product.name}>
+                                {product.name.length > 40 ? product.name.substring(0, 40) + '...' : product.name}
                               </option>
                             ))}
                           </select>
