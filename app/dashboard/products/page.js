@@ -346,13 +346,12 @@ export default function Products() {
                               </td>
                               <td className="px-6 py-4">
                                 <span
-                                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                                    isInactive
+                                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${isInactive
                                       ? 'bg-gray-100 text-gray-500'
                                       : batch.quantity === 0
                                         ? 'bg-red-100 text-red-700'
                                         : 'bg-green-100 text-green-700'
-                                  }`}
+                                    }`}
                                 >
                                   {batch.quantity} {product.unit}
                                 </span>
@@ -364,9 +363,8 @@ export default function Products() {
                                 ₹{batch.sellingPrice?.toLocaleString('en-IN') || '-'}
                               </td>
                               <td className="px-6 py-4">
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                                  isInactive ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'
-                                }`}>
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${isInactive ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'
+                                  }`}>
                                   {batch.gstRate || product.gstRate}%
                                 </span>
                               </td>
@@ -379,17 +377,15 @@ export default function Products() {
                                     </span>
                                     <button
                                       onClick={() => handleToggleBatch(batch._id, batch.isActive)}
-                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                        batch.isActive
+                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${batch.isActive
                                           ? 'bg-green-500 focus:ring-green-500'
                                           : 'bg-gray-300 focus:ring-gray-400'
-                                      }`}
+                                        }`}
                                       title={batch.isActive ? 'Click to deactivate' : 'Click to activate'}
                                     >
                                       <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                          batch.isActive ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${batch.isActive ? 'translate-x-6' : 'translate-x-1'
+                                          }`}
                                       />
                                     </button>
                                     <span className={`text-xs font-medium ${batch.isActive ? 'text-green-600' : 'text-gray-400'}`}>
@@ -542,6 +538,7 @@ export default function Products() {
                       <option value={12}>12%</option>
                       <option value={18}>18%</option>
                       <option value={28}>28%</option>
+                      <option value={40}>40%</option>
                     </select>
                   </div>
 

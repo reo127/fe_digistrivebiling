@@ -432,7 +432,7 @@ export default function NewInvoice() {
                 </label>
                 <input
                   type="text"
-                  
+
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
@@ -457,7 +457,7 @@ export default function NewInvoice() {
                 </label>
                 <input
                   type="date"
-                  
+
                   value={invoiceDate}
                   onChange={(e) => setInvoiceDate(e.target.value)}
                   max={new Date().toISOString().split('T')[0]}
@@ -470,7 +470,7 @@ export default function NewInvoice() {
                   Tax Type *
                 </label>
                 <select
-                  
+
                   value={taxType}
                   onChange={(e) => setTaxType(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
@@ -488,7 +488,7 @@ export default function NewInvoice() {
                   </label>
                   <input
                     type="number"
-                    
+
                     min="0"
                     step="0.01"
                     value={cessRate}
@@ -549,7 +549,7 @@ export default function NewInvoice() {
                   <div className="w-20">
                     <input
                       type="number"
-                      
+
                       min="1"
                       placeholder="Qty"
                       value={item.quantity}
@@ -561,7 +561,7 @@ export default function NewInvoice() {
                   <div className="w-28">
                     <input
                       type="number"
-                      
+
                       step="0.01"
                       placeholder="Price"
                       value={item.sellingPrice}
@@ -572,7 +572,7 @@ export default function NewInvoice() {
 
                   <div className="w-24">
                     <select
-                      
+
                       value={item.gstRate}
                       onChange={(e) => updateItem(index, 'gstRate', Number(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -582,6 +582,7 @@ export default function NewInvoice() {
                       <option value={12}>12%</option>
                       <option value={18}>18%</option>
                       <option value={28}>28%</option>
+                      <option value={40}>40%</option>
                     </select>
                   </div>
 
@@ -678,7 +679,7 @@ export default function NewInvoice() {
                   Payment Status *
                 </label>
                 <select
-                  
+
                   value={paymentStatus}
                   onChange={(e) => {
                     setPaymentStatus(e.target.value);
@@ -699,7 +700,7 @@ export default function NewInvoice() {
                   Payment Method *
                 </label>
                 <select
-                  
+
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -801,11 +802,10 @@ export default function NewInvoice() {
                 name="name"
                 value={customerFormData.name}
                 onChange={handleCustomerFormChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                  customerFormErrors.name
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${customerFormErrors.name
                     ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                     : 'border-gray-300 focus:ring-emerald-500'
-                }`}
+                  }`}
               />
               {customerFormErrors.name && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
@@ -824,11 +824,10 @@ export default function NewInvoice() {
                 name="phone"
                 value={customerFormData.phone}
                 onChange={handleCustomerFormChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                  customerFormErrors.phone
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${customerFormErrors.phone
                     ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                     : 'border-gray-300 focus:ring-emerald-500'
-                }`}
+                  }`}
               />
               {customerFormErrors.phone && (
                 <p className="text-sm text-red-600 flex items-center mt-1">

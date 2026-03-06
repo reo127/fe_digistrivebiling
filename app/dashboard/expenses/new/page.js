@@ -162,14 +162,14 @@ export default function NewExpensePage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date 
+                  Date
                 </label>
                 <input
                   type="date"
                   name="date"
                   value={formData.date}
                   onChange={handleChange}
-                  
+
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -238,11 +238,10 @@ export default function NewExpensePage() {
                   }}
                   min="0"
                   step="0.01"
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                    errors.amount
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${errors.amount
                       ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                       : 'border-gray-300 focus:ring-emerald-500'
-                  }`}
+                    }`}
                 />
                 {errors.amount && (
                   <p className="text-sm text-red-600 flex items-center mt-1">
@@ -267,6 +266,7 @@ export default function NewExpensePage() {
                   <option value="12">12%</option>
                   <option value="18">18%</option>
                   <option value="28">28%</option>
+                  <option value="40">40%</option>
                 </select>
               </div>
 
@@ -301,13 +301,13 @@ export default function NewExpensePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Payment Mode 
+                  Payment Mode
                 </label>
                 <select
                   name="paymentMethod"
                   value={formData.paymentMethod}
                   onChange={handleChange}
-                  
+
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 >
                   <option value="CASH">Cash</option>

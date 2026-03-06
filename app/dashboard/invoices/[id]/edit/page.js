@@ -734,6 +734,7 @@ export default function EditInvoice() {
                           <option value={12}>12%</option>
                           <option value={18}>18%</option>
                           <option value={28}>28%</option>
+                          <option value={40}>40%</option>
                         </select>
                       </div>
 
@@ -964,11 +965,10 @@ export default function EditInvoice() {
                 name="name"
                 value={customerFormData.name}
                 onChange={handleCustomerFormChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                  customerFormErrors.name
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${customerFormErrors.name
                     ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                     : 'border-gray-300 focus:ring-emerald-500'
-                }`}
+                  }`}
               />
               {customerFormErrors.name && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
@@ -987,11 +987,10 @@ export default function EditInvoice() {
                 name="phone"
                 value={customerFormData.phone}
                 onChange={handleCustomerFormChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
-                  customerFormErrors.phone
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${customerFormErrors.phone
                     ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
                     : 'border-gray-300 focus:ring-emerald-500'
-                }`}
+                  }`}
               />
               {customerFormErrors.phone && (
                 <p className="text-sm text-red-600 flex items-center mt-1">
