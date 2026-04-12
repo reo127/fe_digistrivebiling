@@ -169,6 +169,19 @@ Thank you for your business! 🙏`;
     return null;
   }
 
+  // Recalculate PDF totals from raw item data to handle any stored calculation errors
+  const pdfTotals = invoice ? (() => {
+    let subtotal = 0, totalGST = 0;
+    invoice.items.forEach(item => {
+      const taxable = item.quantity * item.sellingPrice - (item.discount || 0);
+      subtotal += taxable;
+      totalGST += (taxable * item.gstRate) / 100;
+    });
+    const grandTotal = Math.round(subtotal + totalGST);
+    const half = totalGST / 2;
+    return { subtotal, totalGST, cgst: half, sgst: half, igst: totalGST, grandTotal };
+  })() : null;
+
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-6">
@@ -388,6 +401,9 @@ Thank you for your business! 🙏`;
                   <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
                     Price
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
+                    Disc.
+                  </th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">
                     GST %
                   </th>
@@ -419,11 +435,14 @@ Thank you for your business! 🙏`;
                     <td className="px-4 py-3 text-sm text-gray-900 text-right">
                       ₹{item.sellingPrice.toFixed(2)}
                     </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                      {(item.discount || 0) > 0 ? `-₹${(item.discount).toFixed(2)}` : '-'}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-900 text-center">
                       {item.gstRate}%
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                      ₹{item.totalAmount.toFixed(2)}
+                      ₹{((item.quantity * item.sellingPrice - (item.discount || 0)) * (1 + item.gstRate / 100)).toFixed(2)}
                     </td>
                   </tr>
                 ))}
@@ -437,45 +456,31 @@ Thank you for your business! 🙏`;
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium text-black">₹{invoice.subtotal.toFixed(2)}</span>
+                  <span className="font-medium text-black">₹{pdfTotals.subtotal.toFixed(2)}</span>
                 </div>
 
                 {invoice.taxType === 'CGST_SGST' ? (
                   <>
                     <div className="flex justify-between">
                       <span className="text-gray-600">CGST:</span>
-                      <span className="font-medium text-black">₹{invoice.totalCGST.toFixed(2)}</span>
+                      <span className="font-medium text-black">₹{pdfTotals.cgst.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">SGST:</span>
-                      <span className="font-medium text-black">₹{invoice.totalSGST.toFixed(2)}</span>
+                      <span className="font-medium text-black">₹{pdfTotals.sgst.toFixed(2)}</span>
                     </div>
                   </>
                 ) : (
                   <div className="flex justify-between">
                     <span className="text-gray-600">IGST:</span>
-                    <span className="font-medium text-black">₹{invoice.totalIGST.toFixed(2)}</span>
-                  </div>
-                )}
-
-                {invoice.discount > 0 && (
-                  <div className="flex justify-between text-red-600">
-                    <span>Discount:</span>
-                    <span className="font-medium text-black">-₹{invoice.discount.toFixed(2)}</span>
-                  </div>
-                )}
-
-                {invoice.roundOff !== 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Round Off:</span>
-                    <span className="font-medium text-black">₹{invoice.roundOff.toFixed(2)}</span>
+                    <span className="font-medium text-black">₹{pdfTotals.igst.toFixed(2)}</span>
                   </div>
                 )}
 
                 <div className="pt-3 border-t-2 border-gray-800">
                   <div className="flex justify-between text-lg font-bold">
                     <span className='text-black'>Grand Total:</span>
-                    <span className='text-black'>₹{invoice.grandTotal.toLocaleString('en-IN')}</span>
+                    <span className='text-black'>₹{pdfTotals.grandTotal.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 

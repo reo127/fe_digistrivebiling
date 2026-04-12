@@ -151,7 +151,7 @@ export default function NewInvoice() {
   const addItem = () => {
     setInvoiceItems([
       ...invoiceItems,
-      { product: '', batch: '', selectedBatch: '', quantity: 1, sellingPrice: 0, gstRate: 12, cessRate: 0 },
+      { product: '', batch: '', selectedBatch: '', quantity: 1, sellingPrice: 0, itemDiscount: 0, gstRate: 12, cessRate: 0 },
     ]);
   };
 
@@ -181,6 +181,15 @@ export default function NewInvoice() {
       updated[index][field] = value;
     }
 
+    // Ensure itemDiscount never exceeds price * qty
+    if (field === 'itemDiscount' || field === 'quantity' || field === 'sellingPrice') {
+      const item = updated[index];
+      const maxDiscount = item.quantity * item.sellingPrice;
+      if ((item.itemDiscount || 0) > maxDiscount) {
+        updated[index].itemDiscount = maxDiscount;
+      }
+    }
+
     setInvoiceItems(updated);
   };
 
@@ -205,31 +214,25 @@ export default function NewInvoice() {
   );
 
   const calculateTotals = () => {
-    const subtotal = invoiceItems.reduce((sum, item) => {
-      return sum + item.quantity * item.sellingPrice;
-    }, 0);
-
+    let subtotal = 0;
     let totalTax = 0;
     let totalCess = 0;
 
-    if (taxType === 'CESS') {
-      // When tax type is CESS, apply the manual CESS rate to all items
-      totalCess = (subtotal * cessRate) / 100;
-    } else {
-      // For CGST_SGST and IGST, calculate GST normally
-      totalTax = invoiceItems.reduce((sum, item) => {
-        const itemTotal = item.quantity * item.sellingPrice;
-        return sum + (itemTotal * item.gstRate) / 100;
-      }, 0);
+    invoiceItems.forEach((item) => {
+      const lineTotal = item.quantity * item.sellingPrice;
+      const taxableAmount = lineTotal - (item.itemDiscount || 0);
 
-      // Also add item-level CESS if any
-      totalCess = invoiceItems.reduce((sum, item) => {
-        const itemTotal = item.quantity * item.sellingPrice;
-        return sum + (itemTotal * (item.cessRate || 0)) / 100;
-      }, 0);
-    }
+      subtotal += taxableAmount;
 
-    const grandTotal = subtotal + totalTax + totalCess - discount;
+      if (taxType === 'CESS') {
+        totalCess += (taxableAmount * cessRate) / 100;
+      } else {
+        totalTax += (taxableAmount * item.gstRate) / 100;
+        totalCess += (taxableAmount * (item.cessRate || 0)) / 100;
+      }
+    });
+
+    const grandTotal = subtotal + totalTax + totalCess;
     const roundOff = Math.round(grandTotal) - grandTotal;
     const finalTotal = Math.round(grandTotal);
 
@@ -281,10 +284,10 @@ export default function NewInvoice() {
         customerAddress: selectedCustomer?.address,
         customerGstin: selectedCustomer?.gstin,
         invoiceDate,
-        items: invoiceItems,
+        items: invoiceItems.map(item => ({ ...item, discount: item.itemDiscount || 0 })),
         taxType,
         cessRate: taxType === 'CESS' ? cessRate : 0,
-        discount,
+        discount: 0,
         paymentStatus,
         paymentMethod,
         paidAmount: paymentStatus === 'PAID' ? totals.finalTotal : paidAmount,
@@ -521,6 +524,7 @@ export default function NewInvoice() {
                   <div className="flex-1">Product</div>
                   <div className="w-20">Qty</div>
                   <div className="w-28">Price</div>
+                  <div className="w-24">Disc. ₹</div>
                   <div className="w-24">GST %</div>
                   <div className="w-24">CESS %</div>
                   <div className="w-32">Total</div>
@@ -571,6 +575,20 @@ export default function NewInvoice() {
                   </div>
 
                   <div className="w-24">
+                    <input
+                      type="number"
+                      min="0"
+                      max={item.quantity * item.sellingPrice}
+                      step="0.01"
+                      placeholder="0"
+                      value={item.itemDiscount || 0}
+                      onChange={(e) => updateItem(index, 'itemDiscount', Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      title="Discount (₹)"
+                    />
+                  </div>
+
+                  <div className="w-24">
                     <select
 
                       value={item.gstRate}
@@ -600,7 +618,7 @@ export default function NewInvoice() {
                   </div>
 
                   <div className="w-32 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm">
-                    ₹{(item.quantity * item.sellingPrice * (1 + (item.gstRate + (item.cessRate || 0)) / 100)).toFixed(2)}
+                    ₹{((item.quantity * item.sellingPrice - (item.itemDiscount || 0)) * (1 + (item.gstRate + (item.cessRate || 0)) / 100)).toFixed(2)}
                   </div>
 
                   <button
@@ -645,18 +663,6 @@ export default function NewInvoice() {
                   <span className="font-medium">₹{totals.totalCess.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Discount:</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={discount}
-                  onChange={(e) => setDiscount(Number(e.target.value))}
-                  className="w-32 px-3 py-1 border border-gray-300 rounded-lg text-right"
-                  placeholder="0.00"
-                />
-              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Round Off:</span>
                 <span className="font-medium">₹{totals.roundOff.toFixed(2)}</span>
