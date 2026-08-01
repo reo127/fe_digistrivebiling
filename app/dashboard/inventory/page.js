@@ -4,9 +4,19 @@ import { useEffect, useState, useMemo } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageLoader from '@/components/PageLoader';
 import { inventoryAPI } from '@/utils/api';
-import { HiSearch, HiExclamationCircle, HiClock, HiBan } from 'react-icons/hi';
+import { useToast } from '@/context/ToastContext';
+import { HiSearch, HiExclamationCircle, HiClock, HiBan, HiDownload } from 'react-icons/hi';
+import * as XLSX from 'xlsx';
+
+const TAB_LABELS = {
+  'all': 'All_Stock',
+  'low-stock': 'Low_Stock',
+  'near-expiry': 'Near_Expiry',
+  'expired': 'Expired'
+};
 
 export default function InventoryPage() {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
@@ -99,6 +109,54 @@ export default function InventoryPage() {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (!tabData.length) {
+      toast.warning('No inventory data available to export');
+      return;
+    }
+
+    try {
+      let rows;
+
+      if (activeTab === 'low-stock') {
+        rows = tabData.map(item => ({
+          'Product': item.name,
+          'Generic Name': item.genericName,
+          'Current Stock': item.stockQuantity,
+          'Minimum Stock': item.minStockLevel,
+          'Status': 'Low Stock'
+        }));
+      } else {
+        rows = tabData.map(batch => {
+          const product = batch.productInfo || batch.product;
+          const expiryStatus = getExpiryStatus(batch.expiryDate);
+
+          return {
+            'Product': product?.name,
+            'Generic Name': product?.genericName,
+            'Batch No': batch.batchNo,
+            'Expiry Date': new Date(batch.expiryDate).toLocaleDateString('en-IN'),
+            'Stock': batch.quantity,
+            'Purchase Price': batch.purchasePrice,
+            'Selling Price': batch.sellingPrice,
+            'Status': expiryStatus.label
+          };
+        });
+      }
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+      const filename = `Inventory_${TAB_LABELS[activeTab]}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
+      toast.success(`Exported to ${filename}`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export inventory to Excel');
+    }
+  };
+
   if (loading) {
     return <PageLoader text="Loading inventory..." />;
   }
@@ -107,9 +165,18 @@ export default function InventoryPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-500 mt-1">Track stock levels, batches, and expiry dates</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
+            <p className="text-gray-500 mt-1">Track stock levels, batches, and expiry dates</p>
+          </div>
+          <button
+            onClick={handleExportToExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            <HiDownload className="w-5 h-5" />
+            Download Excel
+          </button>
         </div>
 
         {/* Stats Cards */}
